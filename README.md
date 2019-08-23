@@ -18,6 +18,11 @@ end
 
 The docs can be found at [HexDocs](https://hexdocs.pm/membrane_element_mpegts).
 
+## Abbrevations
+
+PAT - Program Association Table
+PMT - Program Mapping Table
+
 ## Copyright and License
 
 Copyright 2018, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane)
