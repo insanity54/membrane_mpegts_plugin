@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.TableHeaderTest do
+defmodule Membrane.Element.MpegTS.TableTest do
   use ExUnit.Case
   alias Membrane.Element.MpegTS.Support.Fixtures
   alias Membrane.Element.MpegTS.TableHeader

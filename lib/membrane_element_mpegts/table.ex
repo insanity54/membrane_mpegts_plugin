@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.TableHeader do
+defmodule Membrane.Element.MpegTS.Table do
   @enforce_keys [
     :table_id,
     :section_syntax_indicator,
@@ -45,7 +45,7 @@ defmodule Membrane.Element.MpegTS.TableHeader do
     content_length = section_length - @crc_length - @remaining_header_length
 
     case rest do
-      <<data::binary-size(content_length), crc::4-binary, _::binary>> ->
+      <<raw_data::binary-size(content_length), crc::4-binary, _::binary>> ->
         header = %__MODULE__{
           table_id: table_id,
           section_syntax_indicator: section_syntax_indicator == 1,
@@ -57,11 +57,27 @@ defmodule Membrane.Element.MpegTS.TableHeader do
           last_section_number: last_section_number
         }
 
+        IO.inspect(content_length, label: "Content length")
+
+        data =
+          case parse_table_data(table_id, raw_data) do
+            {:ok, data} -> data
+            {:error, :unsuported_table_type} -> raw_data
+            # TODO shit hit the fan scenario
+            {:error, _} -> nil
+          end
+
         {:ok, {header, data, crc}}
     end
   end
 
   def parse(_), do: {:error, :malformed_packet}
+
+  defp parse_table_data(0x00, data),
+    do: Membrane.Element.MpegTS.ProgramAssociationTable.parse(data)
+
+  defp parse_table_data(0x02, data), do: Membrane.Element.MpegTS.ProgramMapTable.parse(data)
+  defp parse_table_data(_, _), do: {:error, :unsuported_table_type}
 
   # TODO move following to pat module
 end
