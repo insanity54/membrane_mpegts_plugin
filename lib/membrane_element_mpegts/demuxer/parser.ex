@@ -8,14 +8,25 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
 
   @default_stream_state %{started_pts_payload: nil}
 
-  def init_state, do: %{streams: %{}}
+  def init_state, do: %{streams: %{}, known_tables: []}
+
+  def parse_single_packet(<<packet::188-binary, rest::binary>>, state) do
+    with {{:ok, data}, state} <- parse_packet(packet, state) do
+      {:ok, {data, rest, state}}
+    else
+      {{:error, _reason} = error, state} -> {error, {rest, state}}
+    end
+  end
 
   def parse_packets(packets, state, acc \\ [])
 
   def parse_packets(<<packet::188-binary, rest::binary>>, state, acc) do
     case parse_packet(packet, state) do
-      {{:ok, data}, state} -> parse_packets(rest, state, [data | acc])
-      {_error, state} -> parse_packets(rest, state, acc)
+      {{:ok, data}, state} ->
+        parse_packets(rest, state, [data | acc])
+
+      {_error, state} ->
+        parse_packets(rest, state, acc)
     end
   end
 
@@ -40,16 +51,28 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
               _continuity_counter::4,
               optional_fields::bitstring
             >> <- packet,
-          pid: true <- pid in 32..8196 or pid in 8198..8190,
-          do: {:ok, payload} <- parse_pts_optional(optional_fields, adaptation_field_control),
-          do:
-            {:ok, {data, stream_state}} <-
-              parse_pts_payload(
-                payload,
-                payload_unit_start_indicator,
-                state.streams[pid] || @default_stream_state
-              ) do
-      {{:ok, {pid, data}}, state |> put_in([:streams, pid], stream_state)}
+          do: {:ok, payload} <- parse_pts_optional(optional_fields, adaptation_field_control) do
+      cond do
+        pid in 0x0000..0x0004 or pid in state.known_tables ->
+          <<_pointer::8, payload::binary>> = payload
+          known_tables = state.known_tables |> List.delete(pid)
+          {{:ok, {pid, payload}}, %{state | known_tables: known_tables}}
+
+        pid in 32..8196 or pid in 8198..8190 ->
+          with {:ok, {data, stream_state}} <-
+                 parse_pts_payload(
+                   payload,
+                   payload_unit_start_indicator,
+                   state.streams[pid] || @default_stream_state
+                 ) do
+            {{:ok, {pid, data}}, state |> put_in([:streams, pid], stream_state)}
+          else
+            error -> {error, state |> put_in([:streams, pid], @default_stream_state)}
+          end
+
+        true ->
+          {{:error, :unsuported_pid}, state}
+      end
     else
       pts: _ -> {{:error, {:invalid_packet, :pts}}, state}
       pid: _ -> {{:error, {:unsupported_packet, :pid}}, state}
