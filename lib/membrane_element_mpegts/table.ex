@@ -1,4 +1,8 @@
 defmodule Membrane.Element.MpegTS.Table do
+  @moduledoc """
+  This module contains functions for parsing MPEG-TS tables.
+  """
+
   @enforce_keys [
     :table_id,
     :section_syntax_indicator,
@@ -24,9 +28,42 @@ defmodule Membrane.Element.MpegTS.Table do
 
   @crc_length 4
   @remaining_header_length 5
-  @spec parse(any) :: {:ok, {t(), integer, byte}} | {:error, :malformed_packet}
 
-  def parse(<<
+  @doc """
+  Parser an MPEG-TS table.
+
+  Attempts to parse it's contents according table id value. If table is not recognized
+  it's raw binary data is returned.
+  """
+  @spec parse(any) :: {:ok, {t(), binary | map, <<_::32>>}} | {:error, :malformed_packet}
+  def parse(data) do
+    with {:ok, {header, data}} <- parse_header(data) do
+      content_length = header.section_length - @crc_length - @remaining_header_length
+
+      case data do
+        <<raw_data::binary-size(content_length), crc::4-binary, _::binary>> ->
+          data =
+            case parse_table_data(header.table_id, raw_data) do
+              {:ok, data} ->
+                data
+
+              {:error, :unsuported_table_type} ->
+                raw_data
+            end
+
+          {:ok, {header, data, crc}}
+
+        _ ->
+          {:error, :malformed_packet}
+      end
+    end
+  end
+
+  @doc """
+  Parses data that preceeds all the MPEG-TS tables.
+  """
+  @spec parse_header(any) :: {:ok, {t(), binary}} | {:error, :malformed_header}
+  def parse_header(<<
         table_id::8,
         section_syntax_indicator::1,
         0::1,
@@ -42,42 +79,28 @@ defmodule Membrane.Element.MpegTS.Table do
         last_section_number::8,
         rest::binary
       >>) do
-    content_length = section_length - @crc_length - @remaining_header_length
+    header = %__MODULE__{
+      table_id: table_id,
+      section_syntax_indicator: section_syntax_indicator == 1,
+      section_length: section_length,
+      transport_stream_id: transport_stream_id,
+      version_number: version_number,
+      current_next_indicator: current_next_indicator == 1,
+      section_number: section_number,
+      last_section_number: last_section_number
+    }
 
-    case rest do
-      <<raw_data::binary-size(content_length), crc::4-binary, _::binary>> ->
-        header = %__MODULE__{
-          table_id: table_id,
-          section_syntax_indicator: section_syntax_indicator == 1,
-          section_length: section_length,
-          transport_stream_id: transport_stream_id,
-          version_number: version_number,
-          current_next_indicator: current_next_indicator == 1,
-          section_number: section_number,
-          last_section_number: last_section_number
-        }
-
-        IO.inspect(content_length, label: "Content length")
-
-        data =
-          case parse_table_data(table_id, raw_data) do
-            {:ok, data} -> data
-            {:error, :unsuported_table_type} -> raw_data
-            # TODO shit hit the fan scenario
-            {:error, _} -> nil
-          end
-
-        {:ok, {header, data, crc}}
-    end
+    {:ok, {header, rest}}
   end
 
-  def parse(_), do: {:error, :malformed_packet}
+  def parse_header(_), do: {:error, :malformed_header}
 
   defp parse_table_data(0x00, data),
     do: Membrane.Element.MpegTS.ProgramAssociationTable.parse(data)
 
-  defp parse_table_data(0x02, data), do: Membrane.Element.MpegTS.ProgramMapTable.parse(data)
-  defp parse_table_data(_, _), do: {:error, :unsuported_table_type}
+  defp parse_table_data(0x02, data),
+    do: Membrane.Element.MpegTS.ProgramMapTable.parse(data)
 
-  # TODO move following to pat module
+  defp parse_table_data(_, _),
+    do: {:error, :unsuported_table_type}
 end
