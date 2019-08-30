@@ -6,8 +6,8 @@ defmodule Membrane.Element.MpegTS.ProgramAssociationTableTest do
 
   describe "Program association table parser" do
     test "parses valid packet" do
-      assert {:ok, [mapping]} = ProgramAssociationTable.parse(Fixtures.pat())
-      assert mapping == %{program_map_pid: 4096, program_number: 1}
+      assert {:ok, mapping} = ProgramAssociationTable.parse(Fixtures.pat())
+      assert mapping == %{1 => 4096}
     end
 
     test "returns an error when data is not valid" do
