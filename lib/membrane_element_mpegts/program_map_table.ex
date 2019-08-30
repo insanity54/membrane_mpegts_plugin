@@ -3,6 +3,14 @@ defmodule Membrane.Element.MpegTS.ProgramMapTable do
 
   alias Membrane.Element.MpegTS.ProgramMapTable.StreamTypeAssigment
 
+  @type t :: %__MODULE__{
+          streams: map(),
+          program_info: list(),
+          pcr_pid: integer
+        }
+
+  @spec parse(<<_::32, _::_*8>>) ::
+          {:error, :malformed_entry} | {:ok, t()}
   def parse(<<
         _reserved::3,
         pcr_pid::13,
