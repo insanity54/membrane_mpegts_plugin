@@ -1,13 +1,13 @@
 defmodule Membrane.Element.MpegTS.TableTest do
   use ExUnit.Case
   alias Membrane.Element.MpegTS.Support.Fixtures
-  alias Membrane.Element.MpegTS.TableHeader
+  alias Membrane.Element.MpegTS.Table
 
   describe "Table header parser" do
     test "parses valid PAT header" do
-      assert {:ok, {header, data, crc}} = TableHeader.parse(Fixtures.pat_packet())
+      assert {:ok, {header, data, crc}} = Table.parse(Fixtures.pat_payload())
 
-      assert header == %TableHeader{
+      assert header == %Table{
                table_id: 0,
                section_syntax_indicator: true,
                section_length: 13,
@@ -18,14 +18,14 @@ defmodule Membrane.Element.MpegTS.TableTest do
                last_section_number: 0
              }
 
-      assert data == Fixtures.pat()
+      assert data == %{1 => 4096}
       assert crc == <<0x2A, 0xB1, 0x04, 0xB2>>
     end
 
     test "parses valid PMT header" do
-      assert {:ok, {header, data, crc}} = TableHeader.parse(Fixtures.pmt_packet())
+      assert {:ok, {header, data, crc}} = Table.parse(Fixtures.pmt_payload())
 
-      assert header == %TableHeader{
+      assert header == %Table{
                table_id: 2,
                section_syntax_indicator: true,
                section_length: 23,
@@ -36,11 +36,18 @@ defmodule Membrane.Element.MpegTS.TableTest do
                last_section_number: 0
              }
 
-      assert data == Fixtures.pmt()
+      assert data == %Membrane.Element.MpegTS.ProgramMapTable{
+               pcr_pid: 256,
+               program_info: [],
+               streams: %{
+                 256 => %{stream_type: :h264, stream_type_id: 27},
+                 257 => %{stream_type: :mpeg_audio, stream_type_id: 3}
+               }
+             }
     end
 
     test "returns an error when data is invalid" do
-      assert {:error, :malformed_packet} == TableHeader.parse(<<123, 231, 132>>)
+      assert {:error, :malformed_header} == Table.parse(<<123, 231, 132>>)
     end
   end
 end
