@@ -7,8 +7,9 @@ defmodule Membrane.Element.MpegTS.Support.Fixtures do
   end
 
   def pat_packet do
-    packet = <<0x47, 0x40, 0x00, 0x10, 0x0>> <> pat_payload()
-    packet <> padding_for(packet)
+    <<0x47, 0x40, 0x00, 0x10, 0x0>>
+    |> Kernel.<>(pat_payload())
+    |> add_padding()
   end
 
   def pmt do
@@ -18,6 +19,21 @@ defmodule Membrane.Element.MpegTS.Support.Fixtures do
   def pmt_payload do
     <<0x02, 0xB0, 0x17, 0x00, 0x01, 0xC1, 0x00, 0x00, 0xE1, 0x00, 0xF0, 0x00, 0x1B, 0xE1, 0x00,
       0xF0, 0x00, 0x03, 0xE1, 0x01, 0xF0, 0x00, 0x4E, 0x59, 0x3D, 0x1E>>
+  end
+
+  def pmt_packet() do
+    <<0x47, 0x50, 0x00, 0x10>>
+    |> Kernel.<>(null_pointer())
+    |> Kernel.<>(pmt_payload())
+    |> add_padding()
+  end
+
+  defp null_pointer do
+    <<0x00>>
+  end
+
+  defp add_padding(packet) do
+    packet <> padding_for(packet)
   end
 
   defp padding_for(packet) do

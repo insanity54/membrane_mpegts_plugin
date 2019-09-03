@@ -5,6 +5,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   use Membrane.Element.Base.Filter
 
   alias __MODULE__.Parser
+  alias Membrane.Element.MpegTS.Table
   alias Membrane.Buffer
 
   @ts_packet_size 188
@@ -98,6 +99,10 @@ defmodule Membrane.Element.MpegTS.Demuxer do
      %State{state | queue: queue, parser: parser}}
   end
 
+  defp handle_startup(%State{queue: queue} = state) when byte_size(queue) < 188 do
+    {{:ok, demand: {:input, 1}}, state}
+  end
+
   defp handle_startup(state) do
     case Parser.parse_single_packet(state.queue, state.parser) do
       {:ok, {{_pid, table_data}, rest, parser_state}} ->
@@ -114,7 +119,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   defp handle_table(state, table_data)
 
   defp handle_table(%State{work_state: :waiting_pat} = state, table_data) do
-    with {:ok, {_header, data, _crc}} <-
+    with {:ok, {%Table{table_id: 0}, data, _crc}} <-
            Membrane.Element.MpegTS.Table.parse(table_data) do
       parser = %{state.parser | known_tables: Map.values(data)}
       state = %State{state | work_state: :waiting_pmt, parser: parser}
@@ -123,11 +128,14 @@ defmodule Membrane.Element.MpegTS.Demuxer do
     else
       {:error, _} = error ->
         {error, state}
+
+      _ ->
+        {{:error, :wrong_table}, state}
     end
   end
 
   defp handle_table(%State{work_state: :waiting_pmt} = state, table_data) do
-    with {:ok, {header, data, _crc}} <- Membrane.Element.MpegTS.Table.parse(table_data) do
+    with {:ok, {%Table{table_id: 2} = header, data, _crc}} <- Table.parse(table_data) do
       configuration = Map.put(state.configuration, header.transport_stream_id, data)
       state = %State{state | configuration: configuration}
 
@@ -140,7 +148,11 @@ defmodule Membrane.Element.MpegTS.Demuxer do
           {:ok, state}
       end
     else
-      {:error, _} = error -> {error, state}
+      {:error, _} = error ->
+        {error, state}
+
+      _ ->
+        {{:error, :wrong_table}, state}
     end
   end
 

@@ -1,7 +1,7 @@
 defmodule Membrane.Element.MpegTS.ProgramMapTableTest do
   use ExUnit.Case
 
-  alias Membrane.Element.MpegTS.{ProgramMapTable, Table}
+  alias Membrane.Element.MpegTS.ProgramMapTable
   alias Membrane.Element.MpegTS.Support.Fixtures
 
   describe "Program Map Table parser" do
