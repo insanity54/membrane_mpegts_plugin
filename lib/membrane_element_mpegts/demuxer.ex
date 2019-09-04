@@ -66,6 +66,16 @@ defmodule Membrane.Element.MpegTS.Demuxer do
     |> handle_startup()
   end
 
+  def handle_process(
+        :input,
+        %Buffer{payload: payload},
+        _ctx,
+        %State{work_state: :waiting_link, queue: q} = state
+      ) do
+    state = %State{state | queue: q <> payload}
+    {:ok, state}
+  end
+
   def handle_process(:input, buffer, ctx, %State{work_state: :working} = state) do
     {payloads, queue, parser} = Parser.parse_packets(state.queue <> buffer.payload, state.parser)
 
@@ -107,7 +117,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
     case Parser.parse_single_packet(state.queue, state.parser) do
       {:ok, {{_pid, table_data}, rest, parser_state}} ->
         %State{state | parser: parser_state, queue: rest}
-        |> handle_table(table_data)
+        |> parse_table(table_data)
         |> handle_parse_result()
 
       {{:error, _reason}, {rest, parser_state}} ->
@@ -116,44 +126,39 @@ defmodule Membrane.Element.MpegTS.Demuxer do
     end
   end
 
-  defp handle_table(state, table_data)
-
-  defp handle_table(%State{work_state: :waiting_pat} = state, table_data) do
-    with {:ok, {%Table{table_id: 0}, data, _crc}} <-
+  defp parse_table(state, table_data) do
+    with {:ok, {header, data, _crc}} <-
            Membrane.Element.MpegTS.Table.parse(table_data) do
-      parser = %{state.parser | known_tables: Map.values(data)}
-      state = %State{state | work_state: :waiting_pmt, parser: parser}
-
-      {:ok, state}
+      handle_table(header, data, state)
     else
       {:error, _} = error ->
         {error, state}
-
-      _ ->
-        {{:error, :wrong_table}, state}
     end
   end
 
-  defp handle_table(%State{work_state: :waiting_pmt} = state, table_data) do
-    with {:ok, {%Table{table_id: 2} = header, data, _crc}} <- Table.parse(table_data) do
-      configuration = Map.put(state.configuration, header.transport_stream_id, data)
-      state = %State{state | configuration: configuration}
+  defp handle_table(%Table{table_id: 0}, data, %State{work_state: :waiting_pat} = state) do
+    parser = %{state.parser | known_tables: Map.values(data)}
+    state = %State{state | work_state: :waiting_pmt, parser: parser}
 
-      case state.parser.known_tables do
-        [] ->
-          state = %State{state | work_state: :waiting_link}
-          {{:ok, notify: {:mpeg_mapping, configuration}}, state}
+    {:ok, state}
+  end
 
-        _ ->
-          {:ok, state}
-      end
-    else
-      {:error, _} = error ->
-        {error, state}
+  defp handle_table(%Table{table_id: 2} = header, data, %State{work_state: :waiting_pmt} = state) do
+    configuration = Map.put(state.configuration, header.transport_stream_id, data)
+    state = %State{state | configuration: configuration}
+
+    case state.parser.known_tables do
+      [] ->
+        state = %State{state | work_state: :waiting_link}
+        {{:ok, notify: {:mpeg_mapping, configuration}}, state}
 
       _ ->
-        {{:error, :wrong_table}, state}
+        {:ok, state}
     end
+  end
+
+  defp handle_table(_, _, state) do
+    {{:error, :wrong_table}, state}
   end
 
   defp handle_parse_result({:ok, %State{work_state: ws, queue: queue} = state})
