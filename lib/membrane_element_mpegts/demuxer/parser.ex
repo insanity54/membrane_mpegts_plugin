@@ -14,7 +14,8 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
     with {{:ok, data}, state} <- parse_packet(packet, state) do
       {:ok, {data, rest, state}}
     else
-      {{:error, _reason} = error, state} -> {error, {rest, state}}
+      {{:error, _reason} = error, state} ->
+        {error, {rest, state}}
     end
   end
 
@@ -67,7 +68,8 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
                  ) do
             {{:ok, {pid, data}}, state |> put_in([:streams, pid], stream_state)}
           else
-            error -> {error, state |> put_in([:streams, pid], @default_stream_state)}
+            {:error, _} = error ->
+              {error, state |> put_in([:streams, pid], @default_stream_state)}
           end
 
         true ->
@@ -156,6 +158,6 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
   end
 
   defp parse_pes_optional(optional) do
-    optional
+    {:ok, optional}
   end
 end
