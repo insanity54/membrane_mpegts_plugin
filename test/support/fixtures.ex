@@ -28,6 +28,22 @@ defmodule Membrane.Element.MpegTS.Support.Fixtures do
     |> add_padding()
   end
 
+  def data_packet(pid, payload) do
+    adaptation_field = <<0x50, 0x00, 0x00, 0x7B, 0x0C, 0x7E, 0x00>>
+
+    <<
+      0x47::8,
+      0b010::3,
+      pid::13,
+      0b00110000::8,
+      byte_size(adaptation_field)::8
+    >>
+    |> Kernel.<>(adaptation_field)
+    |> Kernel.<>(<<1::24, 1::8, 0::16>>)
+    |> Kernel.<>(payload)
+    |> add_padding()
+  end
+
   defp null_pointer do
     <<0x00>>
   end
