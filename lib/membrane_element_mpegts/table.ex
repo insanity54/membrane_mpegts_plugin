@@ -19,7 +19,7 @@ defmodule Membrane.Element.MpegTS.Table do
           table_id: 0..3 | 16..31,
           section_syntax_indicator: boolean,
           section_length: 0..1021,
-          transport_stream_id: 0..65535,
+          transport_stream_id: 0..65_535,
           version_number: 0..31,
           current_next_indicator: boolean,
           section_number: 0..255,

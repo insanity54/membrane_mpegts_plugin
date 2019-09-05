@@ -127,10 +127,10 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   end
 
   defp parse_table(state, table_data) do
-    with {:ok, {header, data, _crc}} <-
-           Membrane.Element.MpegTS.Table.parse(table_data) do
-      handle_table(header, data, state)
-    else
+    case Membrane.Element.MpegTS.Table.parse(table_data) do
+      {:ok, {header, data, _crc}} ->
+        handle_table(header, data, state)
+
       {:error, _} = error ->
         {error, state}
     end

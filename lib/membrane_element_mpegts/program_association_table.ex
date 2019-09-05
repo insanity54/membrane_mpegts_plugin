@@ -1,6 +1,6 @@
 defmodule Membrane.Element.MpegTS.ProgramAssociationTable do
   @type entry :: %{
-          program_number: 0..65535,
+          program_number: 0..65_535,
           program_map_pid: 0..8191
         }
 

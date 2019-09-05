@@ -11,9 +11,10 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
   def init_state, do: %{streams: %{}, known_tables: []}
 
   def parse_single_packet(<<packet::188-binary, rest::binary>>, state) do
-    with {{:ok, data}, state} <- parse_packet(packet, state) do
-      {:ok, {data, rest, state}}
-    else
+    case parse_packet(packet, state) do
+      {{:ok, data}, state} ->
+        {:ok, {data, rest, state}}
+
       {{:error, _reason} = error, state} ->
         {error, {rest, state}}
     end
@@ -60,14 +61,15 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
           {{:ok, {pid, payload}}, %{state | known_tables: known_tables}}
 
         pid in 32..8196 or pid in 8198..8190 ->
-          with {:ok, {data, stream_state}} <-
-                 parse_pts_payload(
-                   payload,
-                   payload_unit_start_indicator,
-                   state.streams[pid] || @default_stream_state
-                 ) do
-            {{:ok, {pid, data}}, state |> put_in([:streams, pid], stream_state)}
-          else
+          parse_pts_payload(
+            payload,
+            payload_unit_start_indicator,
+            state.streams[pid] || @default_stream_state
+          )
+          |> case do
+            {:ok, {data, stream_state}} ->
+              {{:ok, {pid, data}}, state |> put_in([:streams, pid], stream_state)}
+
             {:error, _} = error ->
               {error, state |> put_in([:streams, pid], @default_stream_state)}
           end
@@ -91,14 +93,16 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
   end
 
   defp parse_pts_optional(optional, 0b11) do
-    with <<
-           adaptation_field_length::8,
-           _adaptation_field::binary-size(adaptation_field_length),
-           payload::bitstring
-         >> <- optional do
-      {:ok, payload}
-    else
-      _ -> {:error, {:invalid_packet, :adaptation_field}}
+    case optional do
+      <<
+        adaptation_field_length::8,
+        _adaptation_field::binary-size(adaptation_field_length),
+        payload::bitstring
+      >> ->
+        {:ok, payload}
+
+      _ ->
+        {:error, {:invalid_packet, :adaptation_field}}
     end
   end
 
@@ -120,40 +124,40 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
     {:error, {:unsupported_packet, :not_pes}}
   end
 
-  defp parse_pes_packet(packet) do
-    with <<
-           1::24,
-           _stream_id::8,
-           _packet_length::16,
-           optional_fields::bitstring
-         >> <- packet do
-      parse_pes_optional(optional_fields)
-    else
-      _ -> {:error, {:invalid_packet, :pes}}
-    end
+  defp parse_pes_packet(<<
+         1::24,
+         _stream_id::8,
+         _packet_length::16,
+         optional_fields::bitstring
+       >>) do
+    parse_pes_optional(optional_fields)
   end
 
+  defp parse_pes_packet(_), do: {:error, {:invalid_packet, :pes}}
+
   defp parse_pes_optional(<<0b10::2, optional::bitstring>>) do
-    with <<
-           _scrambling_control::2,
-           _priority::1,
-           _data_alignment_indicator::1,
-           _copyright::1,
-           _original_or_copy::1,
-           _pts_dts_indicator::2,
-           _escr_flag::1,
-           _es_rate_flag::1,
-           _dsm_trick_mode_flag::1,
-           _additional_copy_info_flag::1,
-           _crc_flag::1,
-           _extension_flag::1,
-           pes_header_length::8,
-           _optional_fields::binary-size(pes_header_length),
-           data::binary
-         >> <- optional do
-      {:ok, data}
-    else
-      _ -> {:error, {:invalid_packet, :pes_optional}}
+    case optional do
+      <<
+        _scrambling_control::2,
+        _priority::1,
+        _data_alignment_indicator::1,
+        _copyright::1,
+        _original_or_copy::1,
+        _pts_dts_indicator::2,
+        _escr_flag::1,
+        _es_rate_flag::1,
+        _dsm_trick_mode_flag::1,
+        _additional_copy_info_flag::1,
+        _crc_flag::1,
+        _extension_flag::1,
+        pes_header_length::8,
+        _optional_fields::binary-size(pes_header_length),
+        data::binary
+      >> ->
+        {:ok, data}
+
+      _ ->
+        {:error, {:invalid_packet, :pes_optional}}
     end
   end
 
