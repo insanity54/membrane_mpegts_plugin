@@ -1,6 +1,9 @@
 defmodule Membrane.Element.MpegTS.DemuxerTest do
   use ExUnit.Case
 
+  # TODO: Marked for refactoring
+
+  alias Membrane.Buffer
   alias Membrane.Element.MpegTS.Demuxer
   alias Membrane.Element.MpegTS.Support.Fixtures
   alias Demuxer.State
@@ -8,11 +11,6 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
   describe "When waiting for program association table demuxer" do
     setup _ do
       [state: %State{work_state: :waiting_pat}]
-    end
-
-    test "should demand exactly one buffer", %{state: state} do
-      assert {{:ok, actions}, state} = Demuxer.handle_demand(:input, 10, :buffers, nil, state)
-      assert actions == [demand: {:input, 1}]
     end
 
     test "should parse pat and transition to waiting for pmt state", %{state: state} do
@@ -35,12 +33,18 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
       [state: %State{work_state: :waiting_pmt}]
     end
 
-    test "should demand exactly one buffer", %{state: state} do
-      assert {{:ok, actions}, state} = Demuxer.handle_demand(:input, 10, :buffers, nil, state)
-      assert actions == [demand: {:input, 1}]
-    end
-
     test "should parse pmt and transition to next state if that is only program", %{state: state} do
+      expected_mapping = %{
+        1 => %Membrane.Element.MpegTS.ProgramMapTable{
+          pcr_pid: 256,
+          program_info: [],
+          streams: %{
+            256 => %{stream_type: :h264, stream_type_id: 27},
+            257 => %{stream_type: :mpeg_audio, stream_type_id: 3}
+          }
+        }
+      }
+
       packet = Fixtures.pmt_packet()
       buffer = %Membrane.Buffer{payload: packet}
       parser = %{state.parser | known_tables: [0x1000]}
@@ -48,29 +52,10 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
       assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, nil, state)
       assert [notify: {:mpeg_mapping, mapping}] = actions
 
-      assert %{
-               1 => %Membrane.Element.MpegTS.ProgramMapTable{
-                 pcr_pid: 256,
-                 program_info: [],
-                 streams: %{
-                   256 => %{stream_type: :h264, stream_type_id: 27},
-                   257 => %{stream_type: :mpeg_audio, stream_type_id: 3}
-                 }
-               }
-             } == mapping
+      assert expected_mapping == mapping
 
       assert state == %Membrane.Element.MpegTS.Demuxer.State{
-               configuration: %{
-                 1 => %Membrane.Element.MpegTS.ProgramMapTable{
-                   pcr_pid: 256,
-                   program_info: [],
-                   streams: %{
-                     256 => %{stream_type: :h264, stream_type_id: 27},
-                     257 => %{stream_type: :mpeg_audio, stream_type_id: 3}
-                   }
-                 }
-               },
-               queue: "",
+               configuration: expected_mapping,
                work_state: :waiting_link
              }
     end
@@ -89,6 +74,7 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
       buffer = %Membrane.Buffer{payload: packet}
       parser = %{state.parser | known_tables: [0x1000, 0x1001]}
       state = %State{state | parser: parser}
+
       assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, nil, state)
       assert [demand: {:input, 1}] = actions
 
@@ -112,13 +98,151 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
   end
 
   describe "When waiting for links demuxer" do
-    test "should not accept demands"
-    test "should not process buffers"
-    test "should transition to working state when received a proper message"
+    setup _ do
+      [state: %State{work_state: :waiting_link}]
+    end
+
+    test "accumulates buffers so they can be processed when pipeline responds", %{state: state} do
+      base = <<1, 2, 3, 4, 5, 6>>
+
+      final_state =
+        base
+        |> :binary.bin_to_list()
+        |> Enum.reduce(state, fn elem, acc ->
+          buffer = %Buffer{payload: <<elem>>}
+          assert {:ok, state} = Demuxer.handle_process(:input, buffer, nil, acc)
+          state
+        end)
+
+      assert final_state.queue == base
+    end
+
+    test "should not process buffers", %{state: state} do
+      queue = "queue"
+      state = %State{state | queue: queue}
+      appendix = "should_be_last"
+
+      assert {:ok, result_state} =
+               Demuxer.handle_process(:input, %Buffer{payload: appendix}, nil, state)
+
+      assert result_state == %State{state | queue: queue <> appendix}
+    end
+
+    test "should transition to working state when received a proper message", %{state: state} do
+      config = 1
+
+      assert {{:ok, actions}, result_state} =
+               Demuxer.handle_other({:config_demuxer, config}, nil, state)
+
+      assert [demand: :input] == actions
+
+      assert %Membrane.Element.MpegTS.Demuxer.State{
+               configuration: config,
+               work_state: :working
+             } == result_state
+    end
   end
 
   describe "When working demuxer" do
-    test "should demand when both pads requested data"
-    test "should process buffers and send them to according pads"
+    setup _ do
+      [state: %State{work_state: :working}]
+    end
+
+    test "should demand when both pads requested data", %{state: state} do
+      # TODO: Fix this
+      assert {:ok, state} =
+               Demuxer.handle_demand({:dynamic, :output, 1}, 10, :buffers, nil, state)
+
+      assert state.demands == MapSet.new([{:dynamic, :output, 1}])
+
+      assert {{:ok, actions}, state} =
+               Demuxer.handle_demand({:dynamic, :output, 2}, 10, :buffers, nil, state)
+
+      assert actions == [demand: {:input, 20}]
+    end
+
+    test "should process buffers and send them to according pads", %{state: state} do
+      pads_count = 10
+
+      example_configuration =
+        0..pads_count
+        |> Enum.map(fn num ->
+          {{:output, num}, 255 + num}
+        end)
+        |> Enum.into(%{})
+
+      dynamic_pads =
+        0..pads_count
+        |> Enum.map(fn num -> {{:dynamic, :output, num}, :pad_data} end)
+        |> Enum.into(%{})
+
+      ctx = %{
+        pads:
+          %{
+            :input => :pad_data
+          }
+          |> Map.merge(dynamic_pads)
+      }
+
+      state = %State{state | configuration: example_configuration}
+
+      example_configuration
+      |> Enum.each(fn {{pad, number}, pid} ->
+        payload = "#{pad}, #{number}"
+        packet = Fixtures.data_packet(pid, payload)
+        buffer = %Buffer{payload: packet}
+
+        assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, ctx, state)
+
+        assert [
+                 buffer: {{:dynamic, ^pad, ^number}, buffers},
+                 redemand: {:dynamic, :output, 0}
+               ] = actions
+
+        assert [%Membrane.Buffer{metadata: %{}, payload: received_payload}] = buffers
+        assert String.starts_with?(received_payload, payload)
+      end)
+    end
+  end
+
+  describe "When element is being configured" do
+    test "it should ignore demands" do
+      [:waiting_pat, :waiting_pmt, :waiting_link]
+      |> Enum.each(fn work_state ->
+        state = %State{work_state: work_state}
+
+        assert {:ok, state} ==
+                 Demuxer.handle_demand({:dynamic, :output, 1}, 1, :buffers, nil, state)
+      end)
+    end
+
+    test "in case of an error next packet is processed from the queue" do
+      packet = Fixtures.pat_packet()
+      garbage = Fixtures.data_packet(5, "garbage")
+      payload = garbage <> packet
+
+      assert {{:ok, actions}, state} =
+               Demuxer.handle_process(:input, %Buffer{payload: payload}, nil, %State{})
+
+      assert actions == [demand: {:input, 1}]
+      assert state.work_state == :waiting_pmt
+      assert state.queue == ""
+    end
+
+    test "in case of an error next buffer is demanded if queue is empty" do
+      garbage = Fixtures.data_packet(5, "garbage")
+
+      assert {{:ok, actions}, state} =
+               Demuxer.handle_process(:input, %Buffer{payload: garbage}, nil, %State{})
+
+      assert actions == [demand: {:input, 1}]
+      assert state.work_state == :waiting_pat
+      assert state.queue == ""
+    end
+  end
+
+  test "When going from prepared to playing demands a buffer to kickstart configuration" do
+    assert {{:ok, demand: {:input, 1}}, %State{}} =
+             Demuxer.handle_prepared_to_playing(nil, %State{})
   end
 end
