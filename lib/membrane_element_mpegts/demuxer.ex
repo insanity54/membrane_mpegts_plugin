@@ -29,8 +29,8 @@ defmodule Membrane.Element.MpegTS.Demuxer do
 
   @impl true
   def handle_demand(_pad, _size, _unit, _ctx, %State{work_state: work_state} = state)
-      when work_state in [:waiting_pat, :waiting_pmt] do
-    {{:ok, demand: {:input, 1}}, state}
+      when work_state in [:waiting_pat, :waiting_pmt, :waiting_link] do
+    {:ok, state}
   end
 
   def handle_demand(pad, size, _unit, _ctx, %State{work_state: :working} = state) do
@@ -52,6 +52,11 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   def handle_other({:config_demuxer, configuration}, _ctx, state) do
     state = %State{state | configuration: configuration, work_state: :working}
     {{:ok, demand: :input}, state}
+  end
+
+  @impl true
+  def handle_prepared_to_playing(_ctx, state) do
+    {{:ok, demand: {:input, 1}}, state}
   end
 
   @impl true
