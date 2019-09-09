@@ -1,4 +1,7 @@
 defmodule Membrane.Element.MpegTS.ProgramMapTable do
+  @moduledoc """
+  This module is responsible for parsing Program Map Table.
+  """
   defstruct [:pcr_pid, program_info: [], streams: %{}]
 
   alias Membrane.Element.MpegTS.ProgramMapTable.StreamTypeAssigment
@@ -9,8 +12,10 @@ defmodule Membrane.Element.MpegTS.ProgramMapTable do
           pcr_pid: integer
         }
 
-  @spec parse(<<_::32, _::_*8>>) ::
-          {:error, :malformed_entry} | {:ok, t()}
+  @doc """
+  Parses Program Map Table.
+  """
+  @spec parse(binary()) :: {:ok, t()} | {:error, :malformed_entry}
   def parse(<<
         _reserved::3,
         pcr_pid::13,
@@ -52,7 +57,7 @@ defmodule Membrane.Element.MpegTS.ProgramMapTable do
     result =
       Map.put(acc, elementary_pid, %{
         stream_type_id: stream_type_id,
-        stream_type: StreamTypeAssigment.parse(stream_type_id)
+        stream_type: parse_stream_assigment(stream_type_id)
       })
 
     parse_streams(rest, result)
@@ -61,4 +66,7 @@ defmodule Membrane.Element.MpegTS.ProgramMapTable do
   defp parse_streams(_, _) do
     {:error, :malformed_entry}
   end
+
+  def parse_stream_assigment(0x03), do: :mpeg_audio
+  def parse_stream_assigment(0x1B), do: :h264
 end
