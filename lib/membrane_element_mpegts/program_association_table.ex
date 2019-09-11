@@ -1,4 +1,7 @@
 defmodule Membrane.Element.MpegTS.ProgramAssociationTable do
+  @moduledoc """
+  This module is responsible for parsing Program Association Table.
+  """
   @type entry :: %{
           program_number: 0..65_535,
           program_map_pid: 0..8191
