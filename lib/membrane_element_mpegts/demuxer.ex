@@ -2,7 +2,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   @moduledoc """
   Demuxes MpegTS stream.
   """
-  use Membrane.Element.Base.Filter
+  use Membrane.Filter
 
   alias __MODULE__.Parser
   alias Membrane.Element.MpegTS.Table
@@ -13,7 +13,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   defmodule State do
     @moduledoc false
     defstruct queue: <<>>,
-              parser: Parser.init_state(),
+              parser: %Parser.State{},
               demands: MapSet.new(),
               work_state: :waiting_pat,
               configuration: %{}

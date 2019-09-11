@@ -8,7 +8,10 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
 
   @default_stream_state %{started_pts_payload: nil}
 
-  def init_state, do: %{streams: %{}, known_tables: []}
+  defmodule State do
+    @moduledoc false
+    defstruct streams: %{}, known_tables: []
+  end
 
   def parse_single_packet(<<packet::188-binary, rest::binary>>, state) do
     case parse_packet(packet, state) do
@@ -19,6 +22,8 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
         {error, {rest, state}}
     end
   end
+
+  def parse_single_packet(_, _), do: {:error, :packet_malformed}
 
   def parse_packets(packets, state, acc \\ [])
 
@@ -40,7 +45,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
     ~> {&1, rest, state}
   end
 
-  def parse_packet(<<packet::188-binary>>, state) do
+  defp parse_packet(<<packet::188-binary>>, state) do
     withl pts:
             <<
               0x47::8,
@@ -68,7 +73,8 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
           )
           |> case do
             {:ok, {data, stream_state}} ->
-              {{:ok, {pid, data}}, state |> put_in([:streams, pid], stream_state)}
+              state = %State{state | streams: Map.put(state.streams, pid, stream_state)}
+              {{:ok, {pid, data}}, state}
 
             {:error, _} = error ->
               {error, state |> put_in([:streams, pid], @default_stream_state)}
