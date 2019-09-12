@@ -23,7 +23,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
     end
   end
 
-  def parse_single_packet(_, _), do: {:error, :packet_malformed}
+  def parse_single_packet(_data, _state), do: {:error, :packet_malformed}
 
   def parse_packets(packets, state, acc \\ [])
 
@@ -42,7 +42,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
     |> Enum.reverse()
     |> Enum.group_by(fn {pid, _data} -> pid end, fn {_pid, data} -> data end)
     |> Bunch.Map.map_values(&IO.iodata_to_binary/1)
-    ~> {&1, rest, state}
+    ~> {:ok, {&1, rest, state}}
   end
 
   defp parse_packet(<<packet::188-binary>>, state) do
@@ -73,20 +73,24 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
           )
           |> case do
             {:ok, {data, stream_state}} ->
-              state = %State{state | streams: Map.put(state.streams, pid, stream_state)}
-              {{:ok, {pid, data}}, state}
+              {{:ok, {pid, data}}, put_stream(state, pid, stream_state)}
 
             {:error, _} = error ->
-              {error, state |> put_in([:streams, pid], @default_stream_state)}
+              {error, put_stream(state, pid)}
           end
 
         true ->
           {{:error, :unsuported_pid}, state}
       end
     else
-      pts: _ -> {{:error, {:invalid_packet, :pts}}, state}
-      pid: _ -> {{:error, {:unsupported_packet, :pid}}, state}
-      do: error -> {error, state |> put_in([:streams, pid], @default_stream_state)}
+      pts: _ ->
+        {{:error, {:invalid_packet, :pts}}, state}
+
+      pid: _ ->
+        {{:error, {:unsupported_packet, :pid}}, state}
+
+      do: error ->
+        {error, put_stream(state, pid)}
     end
   end
 
@@ -169,5 +173,9 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
 
   defp parse_pes_optional(optional) do
     {:ok, optional}
+  end
+
+  defp put_stream(state, pid, stream \\ @default_stream_state) do
+    %State{state | streams: Map.put(state.streams, pid, stream)}
   end
 end

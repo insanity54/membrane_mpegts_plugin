@@ -1,5 +1,6 @@
 defmodule Membrane.Element.MpegTS.Demuxer.ParserTest do
   use ExUnit.Case
+  require Integer
 
   alias Membrane.Element.MpegTS.Demuxer.Parser
   alias Parser.State
@@ -40,13 +41,125 @@ defmodule Membrane.Element.MpegTS.Demuxer.ParserTest do
                Parser.parse_single_packet(Fixtures.data_packet_video(), state)
     end
 
-    # test "reject an invalid packet"
-    # test "reject a packet that has invalid pid"
-    # test "reject a packet with adaptation field control 0b10"
-    # test "reject a packet with adaptation field control 0b11 with invalid format"
-    # test "reject a packet with no adaptation field"
-    # test "reject a packet that contains no pes data"
-    # test "reject a packet that contains invalid optional pes"
-    # test "successfully parses a valid pes packet without optional fields"
+    test "reject an invalid packet", %{state: state} do
+      assert {:error, :packet_malformed} == Parser.parse_single_packet("garbagio", state)
+    end
+
+    test "reject a packet that has invalid pid", %{state: state} do
+      assert {{:error, :unsuported_pid}, {"", state}} ==
+               Fixtures.data_packet(16, "garbage")
+               |> Parser.parse_single_packet(state)
+    end
+
+    test "reject a packet with adaptation field control 0b10", %{state: state} do
+      assert {{:error, {:unsupported_packet, :only_adaptation_field}}, {"", result_state}} =
+               Fixtures.data_packet(4000, "garbage", adaptation_field_control: 0b10)
+               |> Parser.parse_single_packet(state)
+
+      assert %State{
+               state
+               | streams: %{4000 => %{started_pts_payload: nil}}
+             } == result_state
+    end
+
+    test "reject a packet with no adaptation field", %{state: state} do
+      assert {{:error, {:invalid_packet, :adaptation_field_control}}, {"", result_state}} =
+               Fixtures.data_packet(4000, "garbage", adaptation_field_control: 0b00)
+               |> Parser.parse_single_packet(state)
+
+      assert %State{
+               state
+               | streams: %{4000 => %{started_pts_payload: nil}}
+             } == result_state
+    end
+
+    test "reject a packet with adaptation field control 0b11 with invalid format", %{state: state} do
+      assert {{:error, {:invalid_packet, :adaptation_field}}, {"", result_state}} =
+               Fixtures.data_packet(4096, "payload", adaptation_size: 1000)
+               |> Parser.parse_single_packet(state)
+
+      assert result_state == %State{state | streams: %{4096 => %{started_pts_payload: nil}}}
+    end
+
+    test "reject a packet that contains no pes data", %{state: state} do
+      assert {{:error, {:unsupported_packet, :not_pes}}, {"", result_state}} =
+               Fixtures.data_packet(4096, "payload", pes_data: <<2::24>>)
+               |> Parser.parse_single_packet(state)
+
+      assert result_state == %State{state | streams: %{4096 => %{started_pts_payload: nil}}}
+    end
+
+    test "reject a packet that contains invalid optional pes", %{state: state} do
+      expected_state = %State{state | streams: %{4096 => %{started_pts_payload: nil}}}
+      payload = "p"
+      optional_indicator = <<0b10::2, 0::6>>
+
+      assert {{:error, {:invalid_packet, :pes_optional}}, {"", ^expected_state}} =
+               Fixtures.data_packet(4096, optional_indicator <> payload)
+               |> Parser.parse_single_packet(state)
+    end
+
+    test "successfully parses a valid pes packet without optional fields", %{state: state} do
+      expected_state = %State{state | streams: %{4096 => %{started_pts_payload: :pes}}}
+      payload = "payload"
+
+      assert {:ok, {{4096, data}, "", ^expected_state}} =
+               Fixtures.data_packet(4096, payload)
+               |> Parser.parse_single_packet(state)
+
+      assert String.starts_with?(data, payload)
+    end
+  end
+
+  describe "When parsing multiple pes packets parser should" do
+    test "parse all valid packets and return their contents", %{state: state} do
+      payload_base = "payload"
+      pids = 256..260
+
+      data =
+        pids
+        |> Enum.map(fn pid ->
+          Fixtures.data_packet(pid, payload_base <> to_string(pid))
+        end)
+        |> Enum.join()
+
+      assert {:ok, {result, "", %State{streams: streams}}} = Parser.parse_packets(data, state)
+
+      assert pids
+             |> Enum.zip(result)
+             |> Enum.all?(fn {pid, {s_pid, stream}} ->
+               pid == s_pid && String.starts_with?(stream, payload_base <> to_string(pid))
+             end)
+
+      assert pids
+             |> Enum.zip(streams)
+             |> Enum.all?(fn {pid, {s_pid, stream}} ->
+               pid == s_pid && stream == %{started_pts_payload: :pes}
+             end)
+    end
+
+    test "parse mix of valid and invalid packets and return valid packets", %{state: state} do
+      pids = 256..260
+      payload_base = "payload"
+
+      data =
+        pids
+        |> Enum.map(fn pid ->
+          adaptation_field_control =
+            if Integer.is_even(pid) do
+              3
+            else
+              0
+            end
+
+          Fixtures.data_packet(pid, payload_base <> to_string(pid),
+            adaptation_field_control: adaptation_field_control
+          )
+        end)
+        |> Enum.join()
+
+      assert {:ok, {result, "", %State{streams: streams}}} = Parser.parse_packets(data, state)
+      assert result |> Map.keys() |> length() == 3
+    end
   end
 end
