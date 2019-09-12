@@ -4,8 +4,6 @@ defmodule Membrane.Element.MpegTS.ProgramMapTable do
   """
   defstruct [:pcr_pid, program_info: [], streams: %{}]
 
-  alias Membrane.Element.MpegTS.ProgramMapTable.StreamTypeAssigment
-
   @type t :: %__MODULE__{
           streams: map(),
           program_info: list(),

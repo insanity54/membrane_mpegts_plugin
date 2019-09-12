@@ -1,4 +1,5 @@
 defmodule Membrane.Element.MpegTS.Support.MockPipeline do
+  @moduledoc false
   use Membrane.Pipeline
   alias Membrane.Pipeline.Spec
 
