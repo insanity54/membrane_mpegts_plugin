@@ -123,7 +123,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.ParserTest do
         end)
         |> Enum.join()
 
-      assert {:ok, {result, "", %State{streams: streams}}} = Parser.parse_packets(data, state)
+      assert {result, "", %State{streams: streams}} = Parser.parse_packets(data, state)
 
       assert pids
              |> Enum.zip(result)
@@ -158,7 +158,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.ParserTest do
         end)
         |> Enum.join()
 
-      assert {:ok, {result, "", %State{streams: streams}}} = Parser.parse_packets(data, state)
+      assert {result, "", %State{streams: streams}} = Parser.parse_packets(data, state)
       assert result |> Map.keys() |> length() == 3
     end
   end

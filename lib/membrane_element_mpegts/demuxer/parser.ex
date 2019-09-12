@@ -42,7 +42,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
     |> Enum.reverse()
     |> Enum.group_by(fn {pid, _data} -> pid end, fn {_pid, data} -> data end)
     |> Bunch.Map.map_values(&IO.iodata_to_binary/1)
-    ~> {:ok, {&1, rest, state}}
+    ~> {&1, rest, state}
   end
 
   defp parse_packet(<<packet::188-binary>>, state) do
