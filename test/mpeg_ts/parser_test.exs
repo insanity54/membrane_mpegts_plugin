@@ -13,7 +13,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.ParserTest do
   describe "When parsing a table parser should" do
     test "successfully parse a valid table packet with pid in range of 0-4", %{state: state} do
       raw_data = Fixtures.pat_packet()
-      assert {:ok, {data, "", ^state}} = Parser.parse_single_packet(raw_data, state)
+      assert {{:ok, data}, {"", ^state}} = Parser.parse_single_packet(raw_data, state)
       assert data = {0, Fixtures.pat_payload()}
     end
 
@@ -22,7 +22,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.ParserTest do
     } do
       state = %State{state | known_tables: [0x1000]}
       raw_data = Fixtures.pmt_packet()
-      assert {:ok, {data, "", result_state}} = Parser.parse_single_packet(raw_data, state)
+      assert {{:ok, data}, {"", result_state}} = Parser.parse_single_packet(raw_data, state)
       assert %State{state | known_tables: []} == result_state
       assert {4096, with_padding} = data
       assert String.starts_with?(with_padding, Fixtures.pmt_payload())
@@ -37,7 +37,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.ParserTest do
     test "successfully parse a valid pes packet", %{state: state} do
       expected_state = %State{state | streams: %{256 => %{started_pts_payload: :pes}}}
 
-      assert {:ok, {data, "", ^expected_state}} =
+      assert {{:ok, data}, {"", ^expected_state}} =
                Parser.parse_single_packet(Fixtures.data_packet_video(), state)
     end
 
@@ -103,7 +103,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.ParserTest do
       expected_state = %State{state | streams: %{4096 => %{started_pts_payload: :pes}}}
       payload = "payload"
 
-      assert {:ok, {{4096, data}, "", ^expected_state}} =
+      assert {{:ok, {4096, data}}, {"", ^expected_state}} =
                Fixtures.data_packet(4096, payload)
                |> Parser.parse_single_packet(state)
 

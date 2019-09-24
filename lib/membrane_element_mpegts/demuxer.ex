@@ -120,7 +120,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
 
   defp handle_startup(state) do
     case Parser.parse_single_packet(state.queue, state.parser) do
-      {:ok, {{_pid, table_data}, rest, parser_state}} ->
+      {{:ok, {_pid, table_data}}, {rest, parser_state}} ->
         %State{state | parser: parser_state, queue: rest}
         |> parse_table(table_data)
         |> handle_parse_result()

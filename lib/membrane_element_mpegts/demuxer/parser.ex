@@ -7,16 +7,28 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
   use Bunch
 
   @default_stream_state %{started_pts_payload: nil}
+  @type mpegts_pid :: non_neg_integer
 
   defmodule State do
     @moduledoc false
     defstruct streams: %{}, known_tables: []
+
+    @type t :: %__MODULE__{
+            streams: map,
+            known_tables: [non_neg_integer]
+          }
   end
 
+  @doc """
+  Parses a single packet.
+  """
+  @spec parse_single_packet(binary(), State.t()) ::
+          {{:ok, {mpegts_pid, data :: binary}}, {rest :: binary, State.t()}}
+          | {{:error, reason :: atom()}, {rest :: binary, State.t()}}
   def parse_single_packet(<<packet::188-binary, rest::binary>>, state) do
     case parse_packet(packet, state) do
       {{:ok, data}, state} ->
-        {:ok, {data, rest, state}}
+        {{:ok, data}, {rest, state}}
 
       {{:error, _reason} = error, state} ->
         {error, {rest, state}}
@@ -25,19 +37,24 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
 
   def parse_single_packet(_data, _state), do: {:error, :packet_malformed}
 
-  def parse_packets(packets, state, acc \\ [])
+  @doc """
+  Parses a binary that contains sequence of packets.
+  """
+  @spec parse_packets(binary, State.t()) ::
+          {results :: %{mpegts_pid => [binary]}, rest :: binary, State.t()}
+  def parse_packets(packets, state), do: do_parse_packets(packets, state, [])
 
-  def parse_packets(<<packet::188-binary, rest::binary>>, state, acc) do
+  defp do_parse_packets(<<packet::188-binary, rest::binary>>, state, acc) do
     case parse_packet(packet, state) do
       {{:ok, data}, state} ->
-        parse_packets(rest, state, [data | acc])
+        do_parse_packets(rest, state, [data | acc])
 
       {_error, state} ->
-        parse_packets(rest, state, acc)
+        do_parse_packets(rest, state, acc)
     end
   end
 
-  def parse_packets(<<rest::binary>>, state, acc) do
+  defp do_parse_packets(<<rest::binary>>, state, acc) do
     acc
     |> Enum.reverse()
     |> Enum.group_by(fn {pid, _data} -> pid end, fn {_pid, data} -> data end)
