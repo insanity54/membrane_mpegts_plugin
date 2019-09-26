@@ -59,11 +59,11 @@ defmodule Membrane.Element.MpegTS.MixProject do
 
   defp deps do
     [
-      {:membrane_core, github: "membraneframework/membrane-core", override: true},
+      {:membrane_core, "~> 0.4.0"},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.6", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false},
       {:credo, "~> 1.1.0", only: [:dev, :test], runtime: false},
-      {:membrane_element_file, "~> 0.2.0", only: :test},
+      {:membrane_element_file, "~> 0.2.4", only: :test},
       {:excoveralls, "~> 0.10", only: :test}
     ]
   end
