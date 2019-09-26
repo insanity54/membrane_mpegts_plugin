@@ -149,16 +149,10 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
     end
 
     test "should demand when both pads requested data", %{state: state} do
-      # TODO: Fix this
-      assert {:ok, state} =
+      assert {{:ok, demand: {:input, demand}}, state} =
                Demuxer.handle_demand({:dynamic, :output, 1}, 10, :buffers, nil, state)
 
-      assert state.demands == MapSet.new([{:dynamic, :output, 1}])
-
-      assert {{:ok, actions}, state} =
-               Demuxer.handle_demand({:dynamic, :output, 2}, 10, :buffers, nil, state)
-
-      assert actions == [demand: {:input, 20}]
+      assert is_function(demand)
     end
 
     test "should process buffers and send them to according pads", %{state: state} do

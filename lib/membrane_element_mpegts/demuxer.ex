@@ -33,14 +33,8 @@ defmodule Membrane.Element.MpegTS.Demuxer do
     {:ok, state}
   end
 
-  def handle_demand(pad, size, _unit, _ctx, %State{work_state: :working} = state) do
-    demands = state.demands |> MapSet.put(pad)
-
-    if MapSet.size(demands) == 2 do
-      {{:ok, demand: {:input, 2 * size}}, %{state | demands: MapSet.new()}}
-    else
-      {:ok, %{state | demands: demands}}
-    end
+  def handle_demand(_pad, size, _unit, _ctx, %State{work_state: :working} = state) do
+    {{:ok, demand: {:input, &(&1 + size)}}, state}
   end
 
   @impl true
@@ -60,24 +54,14 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   end
 
   @impl true
-  def handle_process(
-        :input,
-        %Buffer{payload: payload},
-        _ctx,
-        %State{work_state: work_state} = state
-      )
+  def handle_process(:input, buffer, _ctx, %State{work_state: work_state} = state)
       when work_state in [:waiting_pmt, :waiting_pat] do
-    %{state | queue: state.queue <> payload}
+    %{state | queue: state.queue <> buffer.payload}
     |> handle_startup()
   end
 
-  def handle_process(
-        :input,
-        %Buffer{payload: payload},
-        _ctx,
-        %State{work_state: :waiting_link, queue: q} = state
-      ) do
-    state = %State{state | queue: q <> payload}
+  def handle_process(:input, buffer, _ctx, %State{work_state: :waiting_link, queue: q} = state) do
+    state = %State{state | queue: q <> buffer.payload}
     {:ok, state}
   end
 
@@ -110,8 +94,9 @@ defmodule Membrane.Element.MpegTS.Demuxer do
         {:buffer, {pad, buffers}}
       end)
 
-    {{:ok, buffer_actions ++ [redemand: {:dynamic, :output, 0}]},
-     %State{state | queue: queue, parser: parser}}
+    actions = buffer_actions ++ [redemand: {:dynamic, :output, 0}]
+    state = %State{state | queue: queue, parser: parser}
+    {{:ok, actions}, state}
   end
 
   defp handle_startup(%State{queue: queue} = state) when byte_size(queue) < 188 do
