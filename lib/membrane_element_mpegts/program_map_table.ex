@@ -47,7 +47,8 @@ defmodule Membrane.Element.MpegTS.ProgramMapTable do
            elementary_pid::13,
            _reserved1::4,
            # TODO: Use this to parse program_info
-           0::12,
+           program_info_length::12,
+           _::binary-size(program_info_length),
            rest::binary
          >>,
          acc
