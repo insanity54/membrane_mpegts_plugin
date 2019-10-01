@@ -1,6 +1,10 @@
 defmodule Membrane.Element.MpegTS.Demuxer do
   @moduledoc """
   Demuxes MpegTS stream.
+
+  After transition into playing state, this element will wait for PAT and PMT.
+  Upon succesfful parsing of those tables it will send a message to the pipeline in format
+  `{:mpeg_mapping, configuration}`, where configuration contains data read from tables.
   """
   use Membrane.Filter
 
@@ -9,6 +13,8 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   alias Membrane.Buffer
 
   @ts_packet_size 188
+  @pat 0
+  @pmt 2
 
   defmodule State do
     @moduledoc false
@@ -86,10 +92,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
       end)
       |> Enum.map(fn {:dynamic, pad_name, pad_number} = pad ->
         stream_pid = state.configuration[{pad_name, pad_number}]
-
-        buffers =
-          payloads[stream_pid]
-          |> Enum.map(fn payload -> %Buffer{payload: payload} end)
+        buffers = Enum.map(payloads[stream_pid], fn payload -> %Buffer{payload: payload} end)
 
         {:buffer, {pad, buffers}}
       end)
@@ -111,7 +114,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
         |> handle_parse_result()
 
       {{:error, _reason}, {rest, parser_state}} ->
-        %State{state | queue: rest, parser: parser_state}
+        %State{state | parser: parser_state, queue: rest}
         |> handle_startup
     end
   end
@@ -126,24 +129,22 @@ defmodule Membrane.Element.MpegTS.Demuxer do
     end
   end
 
-  defp handle_table(%Table{table_id: 0}, data, %State{work_state: :waiting_pat} = state) do
+  defp handle_table(%Table{table_id: @pat}, data, %State{work_state: :waiting_pat} = state) do
     parser = %{state.parser | known_tables: Map.values(data)}
     state = %State{state | work_state: :waiting_pmt, parser: parser}
 
     {:ok, state}
   end
 
-  defp handle_table(%Table{table_id: 2} = header, data, %State{work_state: :waiting_pmt} = state) do
-    configuration = Map.put(state.configuration, header.transport_stream_id, data)
+  defp handle_table(%Table{table_id: @pmt} = hd, data, %State{work_state: :waiting_pmt} = state) do
+    configuration = Map.put(state.configuration, hd.transport_stream_id, data)
     state = %State{state | configuration: configuration}
 
-    case state.parser.known_tables do
-      [] ->
-        state = %State{state | work_state: :waiting_link}
-        {{:ok, notify: {:mpeg_mapping, configuration}}, state}
-
-      _ ->
-        {:ok, state}
+    if state.parser.known_tables == [] do
+      state = %State{state | work_state: :waiting_link}
+      {{:ok, notify: {:mpeg_mapping, configuration}}, state}
+    else
+      {:ok, state}
     end
   end
 
@@ -151,6 +152,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
     {{:error, :wrong_table}, state}
   end
 
+  # Demands another buffer if queue does not contain enough data
   defp handle_parse_result({:ok, %State{work_state: ws, queue: queue} = state})
        when ws in [:waiting_pat, :waiting_pmt] do
     if queue |> byte_size() < @ts_packet_size do
@@ -160,6 +162,6 @@ defmodule Membrane.Element.MpegTS.Demuxer do
     end
   end
 
-  defp handle_parse_result({{:error, _reason}, state}), do: state |> handle_startup()
+  defp handle_parse_result({{:error, _reason}, state}), do: handle_startup(state)
   defp handle_parse_result({{:ok, _actions}, _state} = result), do: result
 end

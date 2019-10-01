@@ -27,7 +27,7 @@ defmodule Membrane.Element.MpegTS.Support.MockPipeline do
       links: links
     }
 
-    {{:ok, spec}, %{}}
+    {{:ok, spec: spec}, %{}}
   end
 
   def handle_notification({:mpeg_mapping, _maping}, _from, state) do

@@ -53,12 +53,12 @@ defmodule Membrane.Element.MpegTS.ProgramMapTable do
          >>,
          acc
        ) do
-    result =
-      Map.put(acc, elementary_pid, %{
-        stream_type_id: stream_type_id,
-        stream_type: parse_stream_assigment(stream_type_id)
-      })
+    stream = %{
+      stream_type_id: stream_type_id,
+      stream_type: parse_stream_assigment(stream_type_id)
+    }
 
+    result = Map.put(acc, elementary_pid, stream)
     parse_streams(rest, result)
   end
 
@@ -66,6 +66,6 @@ defmodule Membrane.Element.MpegTS.ProgramMapTable do
     {:error, :malformed_entry}
   end
 
-  def parse_stream_assigment(0x03), do: :mpeg_audio
-  def parse_stream_assigment(0x1B), do: :h264
+  defp parse_stream_assigment(0x03), do: :mpeg_audio
+  defp parse_stream_assigment(0x1B), do: :h264
 end

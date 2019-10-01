@@ -21,6 +21,9 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
 
   @doc """
   Parses a single packet.
+
+  Packet should be at least 188 bytes long, otherwise parsing will result in error.
+  Unparsed data will be returned as part of the result.
   """
   @spec parse_single_packet(binary(), State.t()) ::
           {{:ok, {mpegts_pid, data :: binary}}, {rest :: binary, State.t()}}
@@ -39,6 +42,8 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
 
   @doc """
   Parses a binary that contains sequence of packets.
+
+  Each packet that fails parsing shall be ignored.
   """
   @spec parse_packets(binary, State.t()) ::
           {results :: %{mpegts_pid => [binary]}, rest :: binary, State.t()}
@@ -83,12 +88,9 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
           {{:ok, {pid, payload}}, %{state | known_tables: known_tables}}
 
         pid in 32..8196 or pid in 8198..8190 ->
-          parse_pts_payload(
-            payload,
-            payload_unit_start_indicator,
-            state.streams[pid] || @default_stream_state
-          )
-          |> case do
+          stream_state = state.streams[pid] || @default_stream_state
+
+          case parse_pts_payload(payload, payload_unit_start_indicator, stream_state) do
             {:ok, {data, stream_state}} ->
               {{:ok, {pid, data}}, put_stream(state, pid, stream_state)}
 
