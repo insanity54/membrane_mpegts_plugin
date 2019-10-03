@@ -33,7 +33,7 @@ In this particular example we are demuxing a file that contains MPEG audio and H
   def handle_init(path) do
     children = [
       file: %File.Source{location: path, chunk_size: 64000},
-      demuxer: MpegTS.Demuxer,
+      demuxer: MPEG.TS.Demuxer,
       parser: %H264.Parser{framerate: {24, 1}},
       decoder: H264.Decoder,
       sdl: SDL.Player,

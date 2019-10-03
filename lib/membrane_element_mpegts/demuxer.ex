@@ -1,6 +1,6 @@
 defmodule Membrane.Element.MPEG.TS.Demuxer do
   @moduledoc """
-  Demuxes MpegTS stream.
+  Demuxes MPEG TS stream.
 
   After transition into playing state, this element will wait for PAT and PMT.
   Upon succesfful parsing of those tables it will send a message to the pipeline in format
