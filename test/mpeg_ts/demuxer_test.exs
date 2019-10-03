@@ -56,7 +56,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
 
       assert state == %Membrane.Element.MPEG.TS.Demuxer.State{
                configuration: expected_mapping,
-               work_state: :waiting_link
+               work_state: :awaiting_mapping
              }
     end
 
@@ -99,7 +99,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
 
   describe "When waiting for links demuxer" do
     setup _ do
-      [state: %State{work_state: :waiting_link}]
+      [state: %State{work_state: :awaiting_mapping}]
     end
 
     test "accumulates buffers so they can be processed when pipeline responds", %{state: state} do
@@ -201,7 +201,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
 
   describe "When element is being configured" do
     test "it should ignore demands" do
-      [:waiting_pat, :waiting_pmt, :waiting_link]
+      [:waiting_pat, :waiting_pmt, :awaiting_mapping]
       |> Enum.each(fn work_state ->
         state = %State{work_state: work_state}
 

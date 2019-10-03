@@ -24,7 +24,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
               work_state: :waiting_pat,
               configuration: %{}
 
-    @type work_state_t :: :waiting_pat | :waiting_pmt | :waiting_link | :working
+    @type work_state_t :: :waiting_pat | :waiting_pmt | :awaiting_mapping | :working
   end
 
   def_output_pad :output,
@@ -35,7 +35,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   @impl true
   def handle_demand(_pad, _size, _unit, _ctx, %State{work_state: work_state} = state)
-      when work_state in [:waiting_pat, :waiting_pmt, :waiting_link] do
+      when work_state in [:waiting_pat, :waiting_pmt, :awaiting_mapping] do
     {:ok, state}
   end
 
@@ -66,7 +66,12 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     |> handle_startup()
   end
 
-  def handle_process(:input, buffer, _ctx, %State{work_state: :waiting_link, queue: q} = state) do
+  def handle_process(
+        :input,
+        buffer,
+        _ctx,
+        %State{work_state: :awaiting_mapping, queue: q} = state
+      ) do
     state = %State{state | queue: q <> buffer.payload}
     {:ok, state}
   end
@@ -141,7 +146,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     state = %State{state | configuration: configuration}
 
     if state.parser.known_tables == [] do
-      state = %State{state | work_state: :waiting_link}
+      state = %State{state | work_state: :awaiting_mapping}
       {{:ok, notify: {:mpeg_mapping, configuration}}, state}
     else
       {:ok, state}
