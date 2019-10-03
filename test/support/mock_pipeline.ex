@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.Support.MockPipeline do
+defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
   @moduledoc false
   use Membrane.Pipeline
   alias Membrane.Pipeline.Spec
@@ -11,7 +11,7 @@ defmodule Membrane.Element.MpegTS.Support.MockPipeline do
       }) do
     elements = [
       in: %Membrane.Element.File.Source{location: input_path},
-      demuxer: Membrane.Element.MpegTS.Demuxer,
+      demuxer: Membrane.Element.MPEG.TS.Demuxer,
       audio_out: %Membrane.Element.File.Sink{location: audio_out},
       video_out: %Membrane.Element.File.Sink{location: video_out}
     ]

@@ -1,8 +1,8 @@
-defmodule Membrane.Element.MpegTS.ProgramAssociationTableTest do
+defmodule Membrane.Element.MPEG.TS.ProgramAssociationTableTest do
   use ExUnit.Case
 
-  alias Membrane.Element.MpegTS.Support.Fixtures
-  alias Membrane.Element.MpegTS.ProgramAssociationTable
+  alias Membrane.Element.MPEG.TS.Support.Fixtures
+  alias Membrane.Element.MPEG.TS.ProgramAssociationTable
 
   describe "Program association table parser" do
     test "parses valid packet" do

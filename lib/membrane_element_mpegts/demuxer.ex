@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.Demuxer do
+defmodule Membrane.Element.MPEG.TS.Demuxer do
   @moduledoc """
   Demuxes MpegTS stream.
 
@@ -9,7 +9,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   use Membrane.Filter
 
   alias __MODULE__.Parser
-  alias Membrane.Element.MpegTS.Table
+  alias Membrane.Element.MPEG.TS.Table
   alias Membrane.Buffer
 
   @ts_packet_size 188
@@ -120,7 +120,7 @@ defmodule Membrane.Element.MpegTS.Demuxer do
   end
 
   defp parse_table(state, table_data) do
-    case Membrane.Element.MpegTS.Table.parse(table_data) do
+    case Membrane.Element.MPEG.TS.Table.parse(table_data) do
       {:ok, {header, data, _crc}} ->
         handle_table(header, data, state)
 

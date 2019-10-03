@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.MixProject do
+defmodule Membrane.Element.MPEG.TS.MixProject do
   use Mix.Project
 
   @version "0.1.0"

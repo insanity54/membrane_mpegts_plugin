@@ -1,6 +1,6 @@
-# Membrane Multimedia Framework: MpegTS
+# Membrane Multimedia Framework: MPEG-TS
 
-This package provides elements that can be used ...
+This package provides element that can be used for demuxing MPEG-TS.
 
 It is part of [Membrane Multimedia Framework](https://membraneframework.org).
 
@@ -25,7 +25,7 @@ PMT - Program Mapping Table
 
 ## Example Usage
 
-Demuxer is an elemant that has one :input and variable amount of outputs depending on the stream.
+Demuxer is an elemant that has one `:input` and variable amount of outputs depending on the stream.
 In this particular example we are demuxing a file that contains MPEG audio and H264 video.
 
 ```elixir
@@ -79,8 +79,8 @@ with configuration, that maps streams to pads.
 
 ## Copyright and License
 
-Copyright 2018, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane)
+Copyright 2019, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane-element-mpegts)
 
-[![Software Mansion](https://membraneframework.github.io/static/logo/swm_logo_readme.png)](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane)
+[![Software Mansion](https://membraneframework.github.io/static/logo/swm_logo_readme.png)](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane-element-mpegts)
 
 Licensed under the [Apache License, Version 2.0](LICENSE)

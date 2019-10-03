@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.Demuxer.Parser do
+defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
   @moduledoc false
   # Based on:
   # * https://en.wikipedia.org/wiki/MPEG_transport_stream
@@ -87,7 +87,7 @@ defmodule Membrane.Element.MpegTS.Demuxer.Parser do
           known_tables = state.known_tables |> List.delete(pid)
           {{:ok, {pid, payload}}, %{state | known_tables: known_tables}}
 
-        pid in 32..8196 or pid in 8198..8190 ->
+        pid in 32..8186 or pid in 8188..8190 ->
           stream_state = state.streams[pid] || @default_stream_state
 
           case parse_pts_payload(payload, payload_unit_start_indicator, stream_state) do

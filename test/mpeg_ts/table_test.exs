@@ -1,7 +1,7 @@
-defmodule Membrane.Element.MpegTS.TableTest do
+defmodule Membrane.Element.MPEG.TS.TableTest do
   use ExUnit.Case
-  alias Membrane.Element.MpegTS.Support.Fixtures
-  alias Membrane.Element.MpegTS.Table
+  alias Membrane.Element.MPEG.TS.Support.Fixtures
+  alias Membrane.Element.MPEG.TS.Table
 
   describe "Table header parser" do
     test "parses valid PAT header" do
@@ -36,7 +36,7 @@ defmodule Membrane.Element.MpegTS.TableTest do
                last_section_number: 0
              }
 
-      assert data == %Membrane.Element.MpegTS.ProgramMapTable{
+      assert data == %Membrane.Element.MPEG.TS.ProgramMapTable{
                pcr_pid: 256,
                program_info: [],
                streams: %{

@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.ProgramAssociationTable do
+defmodule Membrane.Element.MPEG.TS.ProgramAssociationTable do
   @moduledoc """
   This module is responsible for parsing Program Association Table.
   """

@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.IntegrationTest do
+defmodule Membrane.Element.MPEG.TS.IntegrationTest do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
@@ -13,7 +13,7 @@ defmodule Membrane.Element.MpegTS.IntegrationTest do
 
   test "Demuxer splits incoming stream into elementary streams" do
     options = %Pipeline.Options{
-      module: Membrane.Element.MpegTS.Support.MockPipeline,
+      module: Membrane.Element.MPEG.TS.Support.MockPipeline,
       custom_args: %{
         inptu_path: @input_path,
         audio_out: @audio_out,

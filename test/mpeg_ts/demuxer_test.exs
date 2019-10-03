@@ -1,11 +1,11 @@
-defmodule Membrane.Element.MpegTS.DemuxerTest do
+defmodule Membrane.Element.MPEG.TS.DemuxerTest do
   use ExUnit.Case
 
   # TODO: Marked for refactoring
 
   alias Membrane.Buffer
-  alias Membrane.Element.MpegTS.Demuxer
-  alias Membrane.Element.MpegTS.Support.Fixtures
+  alias Membrane.Element.MPEG.TS.Demuxer
+  alias Membrane.Element.MPEG.TS.Support.Fixtures
   alias Demuxer.State
 
   describe "When waiting for program association table demuxer" do
@@ -35,7 +35,7 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
 
     test "should parse pmt and transition to next state if that is only program", %{state: state} do
       expected_mapping = %{
-        1 => %Membrane.Element.MpegTS.ProgramMapTable{
+        1 => %Membrane.Element.MPEG.TS.ProgramMapTable{
           pcr_pid: 256,
           program_info: [],
           streams: %{
@@ -54,7 +54,7 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
 
       assert expected_mapping == mapping
 
-      assert state == %Membrane.Element.MpegTS.Demuxer.State{
+      assert state == %Membrane.Element.MPEG.TS.Demuxer.State{
                configuration: expected_mapping,
                work_state: :waiting_link
              }
@@ -85,7 +85,7 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
              } = state
 
       assert %{
-               1 => %Membrane.Element.MpegTS.ProgramMapTable{
+               1 => %Membrane.Element.MPEG.TS.ProgramMapTable{
                  pcr_pid: 256,
                  program_info: [],
                  streams: %{
@@ -136,7 +136,7 @@ defmodule Membrane.Element.MpegTS.DemuxerTest do
 
       assert [demand: :input] == actions
 
-      assert %Membrane.Element.MpegTS.Demuxer.State{
+      assert %Membrane.Element.MPEG.TS.Demuxer.State{
                configuration: config,
                work_state: :working
              } == result_state

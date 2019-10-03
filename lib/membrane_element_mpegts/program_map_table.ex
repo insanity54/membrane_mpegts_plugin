@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MpegTS.ProgramMapTable do
+defmodule Membrane.Element.MPEG.TS.ProgramMapTable do
   @moduledoc """
   This module is responsible for parsing Program Map Table.
   """
