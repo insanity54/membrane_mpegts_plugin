@@ -50,7 +50,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       parser = %{state.parser | known_tables: [0x1000]}
       state = %State{state | parser: parser}
       assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, nil, state)
-      assert [notify: {:mpeg_mapping, mapping}] = actions
+      assert [notify: {:mpeg_ts_mapping_req, mapping}] = actions
 
       assert expected_mapping == mapping
 
@@ -132,7 +132,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       config = 1
 
       assert {{:ok, actions}, result_state} =
-               Demuxer.handle_other({:config_demuxer, config}, nil, state)
+               Demuxer.handle_other({:mpeg_ts_mapping, config}, nil, state)
 
       assert [demand: :input] == actions
 

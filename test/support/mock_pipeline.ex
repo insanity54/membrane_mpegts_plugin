@@ -30,9 +30,9 @@ defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
     {{:ok, spec: spec}, %{}}
   end
 
-  def handle_notification({:mpeg_mapping, _maping}, _from, state) do
+  def handle_notification({:mpeg_ts_mapping_req, _maping}, _from, state) do
     mapping = %{{:output, 1} => 256, {:output, 0} => 257}
-    message = {:config_demuxer, mapping}
+    message = {:mpeg_ts_mapping, mapping}
     {{:ok, forward: {:demuxer, message}}, state}
   end
 

@@ -64,12 +64,12 @@ In this particular example we are demuxing a file that contains MPEG audio and H
 ```
 
 Upon successful parsing of MPEG Transport stream specific information, demuxer will notify
-pipeline. When pipeline receives `{:mpeg_mapping, configuration}` message it will need to respond
+pipeline. When pipeline receives `{:mpeg_ts_mapping_req, configuration}` message it will need to respond
 with configuration, that maps streams to pads.
 
 ```elixir
   @impl true
-  def handle_notification({:mpeg_mapping, mapping}, from, state) do
+  def handle_notification({:mpeg_ts_mapping_req, mapping}, from, state) do
     {video_pid, audio_pid} = parse_maping(mapping)
     mapping = %{{:output, 1} => video_pid, {:output, 0} => audio_pid}
     message = {:config_demuxer, mapping}

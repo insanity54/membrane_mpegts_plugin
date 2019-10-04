@@ -2,15 +2,41 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   @moduledoc """
   Demuxes MPEG TS stream.
 
-  After transition into playing state, this element will wait for PAT and PMT.
+  After transition into playing state, this element will wait for
+  [Program Association Table](https://en.wikipedia.org/wiki/MPEG_transport_stream#PAT) and
+  [Program Mapping Table](https://en.wikipedia.org/wiki/MPEG_transport_stream#PMT).
   Upon succesfful parsing of those tables it will send a message to the pipeline in format
-  `{:mpeg_mapping, configuration}`, where configuration contains data read from tables.
+  `{:mpeg_ts_mapping_req, configuration}`, where configuration contains data read from tables.
+
+  Configuration sent by element to pipeline should have following shape
+  ```
+  %{
+    program_id => %Membrane.Element.MPEG.TS.ProgramMapTable{
+      pcr_pid: 256,
+      program_info: [],
+      streams: %{
+        256 => %{stream_type: :h264, stream_type_id: 27},
+        257 => %{stream_type: :mpeg_audio, stream_type_id: 3}
+      }
+    }
+  }
+  ```
   """
   use Membrane.Filter
 
   alias __MODULE__.Parser
-  alias Membrane.Element.MPEG.TS.Table
   alias Membrane.Buffer
+  alias Membrane.Element.MPEG.TS.Table
+  alias Membrane.Element.MPEG.TS.{ProgramAssociationTable, ProgramMapTable}
+
+  @typedoc """
+  This types represents structure that is sent by this element to pipeline.
+  """
+  @type configuration :: %{
+          ProgramAssociationTable.program_id() => ProgramMapTable.t()
+        }
+
+  @type
 
   @ts_packet_size 188
   @pat 0
@@ -49,7 +75,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   end
 
   @impl true
-  def handle_other({:config_demuxer, configuration}, _ctx, state) do
+  def handle_other({:mpeg_ts_mapping, configuration}, _ctx, state) do
     state = %State{state | configuration: configuration, work_state: :working}
     {{:ok, demand: :input}, state}
   end
@@ -151,7 +177,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
     if state.parser.known_tables == [] do
       state = %State{state | work_state: :awaiting_mapping}
-      {{:ok, notify: {:mpeg_mapping, configuration}}, state}
+      {{:ok, notify: {:mpeg_ts_mapping_req, configuration}}, state}
     else
       {:ok, state}
     end

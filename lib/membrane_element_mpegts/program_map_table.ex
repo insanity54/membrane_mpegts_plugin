@@ -7,7 +7,19 @@ defmodule Membrane.Element.MPEG.TS.ProgramMapTable do
   @type t :: %__MODULE__{
           streams: map(),
           program_info: list(),
-          pcr_pid: integer
+          pcr_pid: 0..8191
+        }
+
+  @type stream_type_id :: 0..255
+  @type stream_id :: 0..8191
+
+  @type stream :: %{
+          stream_type: atom,
+          stream_type_id: stream_type_id
+        }
+
+  @type streams :: %{
+          required(stream_id) => stream
         }
 
   @doc """

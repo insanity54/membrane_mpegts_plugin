@@ -2,8 +2,10 @@ defmodule Membrane.Element.MPEG.TS.ProgramAssociationTable do
   @moduledoc """
   This module is responsible for parsing Program Association Table.
   """
+
+  @type program_id :: 0..65_535
   @type entry :: %{
-          program_number: 0..65_535,
+          program_number: program_id,
           program_map_pid: 0..8191
         }
 
