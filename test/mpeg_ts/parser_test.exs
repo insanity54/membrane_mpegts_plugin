@@ -27,10 +27,6 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.ParserTest do
       assert {4096, with_padding} = data
       assert String.starts_with?(with_padding, Fixtures.pmt_payload())
     end
-
-    test "return an error if invalid table packet is fed", %{state: state} do
-      assert {:error, :packet_malformed} = Parser.parse_single_packet("Garbage", state)
-    end
   end
 
   describe "When parsing a pes packet parser should" do
@@ -42,11 +38,14 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.ParserTest do
     end
 
     test "reject an invalid packet", %{state: state} do
-      assert {:error, :packet_malformed} == Parser.parse_single_packet("garbagio", state)
+      data = "garbagio"
+
+      assert {{:error, :not_enough_data}, {data, state}} ==
+               Parser.parse_single_packet(data, state)
     end
 
     test "reject a packet that has invalid pid", %{state: state} do
-      assert {{:error, :unsuported_pid}, {"", state}} ==
+      assert {{:error, :unsuported_stream_pid}, {"", state}} ==
                Fixtures.data_packet(16, "garbage")
                |> Parser.parse_single_packet(state)
     end

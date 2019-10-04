@@ -38,7 +38,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
     end
   end
 
-  def parse_single_packet(_data, _state), do: {:error, :packet_malformed}
+  def parse_single_packet(rest, state), do: {{:error, :not_enough_data}, {rest, state}}
 
   @doc """
   Parses a binary that contains sequence of packets.
@@ -62,7 +62,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
   defp do_parse_packets(<<rest::binary>>, state, acc) do
     acc
     |> Enum.reverse()
-    |> Enum.group_by(fn {pid, _data} -> pid end, fn {_pid, data} -> data end)
+    |> Enum.group_by(fn {stream_pid, _data} -> stream_pid end, fn {_stream_pid, data} -> data end)
     |> Bunch.Map.map_values(&IO.iodata_to_binary/1)
     ~> {&1, rest, state}
   end
@@ -74,7 +74,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
               _transport_error_indicator::1,
               payload_unit_start_indicator::1,
               _transport_priority::1,
-              pid::13,
+              stream_pid::13,
               _transport_scrambling_control::2,
               adaptation_field_control::2,
               _continuity_counter::4,
@@ -82,34 +82,31 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
             >> <- packet,
           do: {:ok, payload} <- parse_pts_optional(optional_fields, adaptation_field_control) do
       cond do
-        pid in 0x0000..0x0004 or pid in state.known_tables ->
+        stream_pid in 0x0000..0x0004 or stream_pid in state.known_tables ->
           <<_pointer::8, payload::binary>> = payload
-          known_tables = state.known_tables |> List.delete(pid)
-          {{:ok, {pid, payload}}, %{state | known_tables: known_tables}}
+          known_tables = state.known_tables |> List.delete(stream_pid)
+          {{:ok, {stream_pid, payload}}, %{state | known_tables: known_tables}}
 
-        pid in 32..8186 or pid in 8188..8190 ->
-          stream_state = state.streams[pid] || @default_stream_state
+        stream_pid in 0x0020..0x1FFA or stream_pid in 0x1FFC..0x1FFE ->
+          stream_state = state.streams[stream_pid] || @default_stream_state
 
           case parse_pts_payload(payload, payload_unit_start_indicator, stream_state) do
             {:ok, {data, stream_state}} ->
-              {{:ok, {pid, data}}, put_stream(state, pid, stream_state)}
+              {{:ok, {stream_pid, data}}, put_stream(state, stream_pid, stream_state)}
 
             {:error, _} = error ->
-              {error, put_stream(state, pid)}
+              {error, put_stream(state, stream_pid)}
           end
 
         true ->
-          {{:error, :unsuported_pid}, state}
+          {{:error, :unsuported_stream_pid}, state}
       end
     else
       pts: _ ->
         {{:error, {:invalid_packet, :pts}}, state}
 
-      pid: _ ->
-        {{:error, {:unsupported_packet, :pid}}, state}
-
       do: error ->
-        {error, put_stream(state, pid)}
+        {error, put_stream(state, stream_pid)}
     end
   end
 
@@ -194,7 +191,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
     {:ok, optional}
   end
 
-  defp put_stream(state, pid, stream \\ @default_stream_state) do
-    %State{state | streams: Map.put(state.streams, pid, stream)}
+  defp put_stream(state, stream_pid, stream \\ @default_stream_state) do
+    %State{state | streams: Map.put(state.streams, stream_pid, stream)}
   end
 end
