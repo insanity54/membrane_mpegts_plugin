@@ -33,10 +33,12 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   This types represents structure that is sent by this element to pipeline.
   """
   @type configuration :: %{
-          ProgramAssociationTable.program_id() => ProgramMapTable.t()
+          ProgramAssociationTable.program_id_t() => ProgramMapTable.t()
         }
 
-  @type
+  @type mapping :: %{
+          ProgramMapTable.stream_id_t() => {Membrane.Element.Pad.name_t(), integer()}
+        }
 
   @ts_packet_size 188
   @pat 0
@@ -102,30 +104,20 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     {:ok, state}
   end
 
-  def handle_process(:input, buffer, ctx, %State{work_state: :working} = state) do
+  def handle_process(:input, buffer, _ctx, %State{work_state: :working} = state) do
     {payloads, queue, parser} = Parser.parse_packets(state.queue <> buffer.payload, state.parser)
 
     payloads =
       payloads
       |> Enum.group_by(fn {pid, _payload} -> pid end, fn {_pid, payload} -> payload end)
 
-    parsed_stream_pids = Map.keys(payloads)
-
     buffer_actions =
-      ctx.pads
-      |> Map.keys()
-      |> Enum.filter(fn
-        {:dynamic, pad_name, pad_number} ->
-          state.configuration[{pad_name, pad_number}] in parsed_stream_pids
-
-        _ ->
-          false
-      end)
-      |> Enum.map(fn {:dynamic, pad_name, pad_number} = pad ->
-        stream_pid = state.configuration[{pad_name, pad_number}]
-        buffers = Enum.map(payloads[stream_pid], fn payload -> %Buffer{payload: payload} end)
-
-        {:buffer, {pad, buffers}}
+      payloads
+      |> Enum.filter(fn {stream_pid, _} -> stream_pid in Map.keys(state.configuration) end)
+      |> Enum.map(fn {stream_pid, payloads} ->
+        buffers = Enum.map(payloads, fn payload -> %Buffer{payload: payload} end)
+        {pad_name, dynamic_id} = state.configuration[stream_pid]
+        {:buffer, {{:dynamic, pad_name, dynamic_id}, buffers}}
       end)
 
     actions = buffer_actions ++ [redemand: {:dynamic, :output, 0}]

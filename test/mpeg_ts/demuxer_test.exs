@@ -161,7 +161,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       example_configuration =
         0..pads_count
         |> Enum.map(fn num ->
-          {{:output, num}, 255 + num}
+          {255 + num, {:output, num}}
         end)
         |> Enum.into(%{})
 
@@ -181,7 +181,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       state = %State{state | configuration: example_configuration}
 
       example_configuration
-      |> Enum.each(fn {{pad, number}, pid} ->
+      |> Enum.each(fn {pid, {pad, number}} ->
         payload = "#{pad}, #{number}"
         packet = Fixtures.data_packet(pid, payload)
         buffer = %Buffer{payload: packet}

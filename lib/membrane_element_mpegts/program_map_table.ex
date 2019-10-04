@@ -10,16 +10,16 @@ defmodule Membrane.Element.MPEG.TS.ProgramMapTable do
           pcr_pid: 0..8191
         }
 
-  @type stream_type_id :: 0..255
-  @type stream_id :: 0..8191
+  @type stream_type_id_t :: 0..255
+  @type stream_id_t :: 0..8191
 
   @type stream :: %{
           stream_type: atom,
-          stream_type_id: stream_type_id
+          stream_type_id: stream_type_id_t
         }
 
   @type streams :: %{
-          required(stream_id) => stream
+          required(stream_id_t) => stream
         }
 
   @doc """
