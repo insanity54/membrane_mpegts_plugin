@@ -52,14 +52,13 @@ defmodule Membrane.Element.MPEG.TS.MixProject do
       links: %{
         "GitHub" => @github_url,
         "Membrane Framework Homepage" => "https://membraneframework.org"
-      },
-      files: ["lib", "mix.exs", "README*", "LICENSE*", ".formatter.exs", "bundlex.exs", "c_src"]
+      }
     ]
   end
 
   defp deps do
     [
-      {:membrane_core, "~> 0.4.0"},
+      {:membrane_core, "~> 0.4.1"},
       {:ex_doc, "~> 0.19", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false},
       {:credo, "~> 1.1.0", only: [:dev, :test], runtime: false},
