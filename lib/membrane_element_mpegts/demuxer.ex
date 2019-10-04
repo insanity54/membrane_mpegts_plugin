@@ -56,7 +56,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   @impl true
   def handle_prepared_to_playing(_ctx, state) do
-    {{:ok, demand: {:input, 1}}, state}
+    {{:ok, demand: :input}, state}
   end
 
   @impl true
@@ -107,8 +107,8 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     {{:ok, actions}, state}
   end
 
-  defp handle_startup(%State{queue: queue} = state) when byte_size(queue) < 188 do
-    {{:ok, demand: {:input, 1}}, state}
+  defp handle_startup(%State{queue: queue} = state) when byte_size(queue) < @ts_packet_size do
+    {{:ok, demand: :input}, state}
   end
 
   defp handle_startup(state) do
@@ -141,8 +141,12 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     {:ok, state}
   end
 
-  defp handle_table(%Table{table_id: @pmt} = hd, data, %State{work_state: :waiting_pmt} = state) do
-    configuration = Map.put(state.configuration, hd.transport_stream_id, data)
+  defp handle_table(
+         %Table{table_id: @pmt} = table,
+         data,
+         %State{work_state: :waiting_pmt} = state
+       ) do
+    configuration = Map.put(state.configuration, table.transport_stream_id, data)
     state = %State{state | configuration: configuration}
 
     if state.parser.known_tables == [] do
@@ -161,7 +165,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   defp handle_parse_result({:ok, %State{work_state: ws, queue: queue} = state})
        when ws in [:waiting_pat, :waiting_pmt] do
     if queue |> byte_size() < @ts_packet_size do
-      {{:ok, demand: {:input, 1}}, state}
+      {{:ok, demand: :input}, state}
     else
       handle_startup(state)
     end

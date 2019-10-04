@@ -17,7 +17,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       packet = Fixtures.pat_packet()
       buffer = %Membrane.Buffer{payload: packet}
       assert {{:ok, actions}, result_state} = Demuxer.handle_process(:input, buffer, nil, state)
-      assert [demand: {:input, 1}] == actions
+      assert [demand: :input] == actions
       parser_state = %{state.parser | known_tables: [4096]}
 
       assert result_state == %State{
@@ -65,7 +65,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       packet = Fixtures.pat_packet() <> tail
       buffer = %Membrane.Buffer{payload: packet}
       assert {{:ok, actions}, result_state} = Demuxer.handle_process(:input, buffer, nil, state)
-      assert [demand: {:input, 1}] == actions
+      assert [demand: :input] == actions
       assert result_state == %State{state | queue: tail}
     end
 
@@ -76,7 +76,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       state = %State{state | parser: parser}
 
       assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, nil, state)
-      assert [demand: {:input, 1}] = actions
+      assert [demand: :input] = actions
 
       assert %State{
                configuration: accumulated_config,
@@ -218,7 +218,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       assert {{:ok, actions}, state} =
                Demuxer.handle_process(:input, %Buffer{payload: payload}, nil, %State{})
 
-      assert actions == [demand: {:input, 1}]
+      assert actions == [demand: :input]
       assert state.work_state == :waiting_pmt
       assert state.queue == ""
     end
@@ -229,14 +229,13 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       assert {{:ok, actions}, state} =
                Demuxer.handle_process(:input, %Buffer{payload: garbage}, nil, %State{})
 
-      assert actions == [demand: {:input, 1}]
+      assert actions == [demand: :input]
       assert state.work_state == :waiting_pat
       assert state.queue == ""
     end
   end
 
   test "When going from prepared to playing demands a buffer to kickstart configuration" do
-    assert {{:ok, demand: {:input, 1}}, %State{}} =
-             Demuxer.handle_prepared_to_playing(nil, %State{})
+    assert {{:ok, demand: :input}, %State{}} = Demuxer.handle_prepared_to_playing(nil, %State{})
   end
 end
