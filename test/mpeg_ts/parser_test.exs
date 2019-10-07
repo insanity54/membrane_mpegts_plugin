@@ -17,9 +17,10 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.ParserTest do
       assert data = {0, Fixtures.pat_payload()}
     end
 
-    test "successfully parse a valid table with pid in pes range but was expected to be table", %{
-      state: state
-    } do
+    test "successfully parse a valid table with pid in pes range but its pid is in known_tables",
+         %{
+           state: state
+         } do
       state = %State{state | known_tables: [0x1000]}
       raw_data = Fixtures.pmt_packet()
       assert {{:ok, data}, {"", result_state}} = Parser.parse_single_packet(raw_data, state)
