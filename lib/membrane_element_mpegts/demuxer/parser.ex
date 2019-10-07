@@ -5,6 +5,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
   # * https://en.wikipedia.org/wiki/Packetized_elementary_stream
   # * https://en.wikipedia.org/wiki/Program-specific_information
   use Bunch
+  use Membrane.Log
 
   @default_stream_state %{started_pts_payload: nil}
   @type mpegts_pid :: non_neg_integer
@@ -48,7 +49,12 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
       {{:ok, data}, state} ->
         do_parse_packets(rest, state, [data | acc])
 
-      {_error, state} ->
+      {{:error, reason}, state} ->
+        """
+        MPEG-TS parser encountered an error: #{inspect(reason)}
+        """
+        |> warn()
+
         do_parse_packets(rest, state, acc)
     end
   end
