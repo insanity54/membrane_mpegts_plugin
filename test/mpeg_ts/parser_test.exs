@@ -61,7 +61,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.ParserTest do
              } == result_state
     end
 
-    test "reject a packet with no adaptation field", %{state: state} do
+    test "reject a packet with adaptation field control set to reserved", %{state: state} do
       assert {{:error, {:invalid_packet, :adaptation_field_control}}, {"", result_state}} =
                Fixtures.data_packet(4000, "garbage", adaptation_field_control: 0b00)
                |> Parser.parse_single_packet(state)
