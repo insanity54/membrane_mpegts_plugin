@@ -161,10 +161,14 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
     end
 
     test "should demand when both pads requested data", %{state: state} do
+      new_demand = 10
+
       assert {{:ok, demand: {:input, demand}}, state} =
-               Demuxer.handle_demand({:dynamic, :output, 1}, 10, :buffers, nil, state)
+               Demuxer.handle_demand({:dynamic, :output, 1}, new_demand, :buffers, nil, state)
 
       assert is_function(demand)
+      old_demand = 3
+      assert demand.(old_demand) == new_demand + old_demand
     end
 
     test "should process buffers and send them to according pads", %{state: state} do
