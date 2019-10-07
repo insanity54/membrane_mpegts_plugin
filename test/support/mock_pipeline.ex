@@ -5,7 +5,7 @@ defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
 
   @impl true
   def handle_init(%{
-        inptu_path: input_path,
+        input_path: input_path,
         audio_out: audio_out,
         video_out: video_out
       }) do

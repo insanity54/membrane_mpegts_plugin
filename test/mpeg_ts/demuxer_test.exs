@@ -35,7 +35,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       [state: %State{work_state: :waiting_pmt}]
     end
 
-    test "should parse pmt and transition to next state if that is only program", %{state: state} do
+    test "should parse PMT and transition to next state if that is the only program", %{state: state} do
       expected_mapping = %{
         1 => %Membrane.Element.MPEG.TS.ProgramMapTable{
           pcr_pid: 256,
@@ -71,7 +71,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       assert result_state == %State{state | queue: tail}
     end
 
-    test "should parse pmt and wait for subsequent pmts if they are to expected", %{state: state} do
+    test "should parse PMT and wait for subsequent PMTs if they are expected", %{state: state} do
       packet = Fixtures.pmt_packet()
       buffer = %Membrane.Buffer{payload: packet}
       parser = %{state.parser | known_tables: [0x1000, 0x1001]}
@@ -130,7 +130,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       assert result_state == %State{state | queue: queue <> appendix}
     end
 
-    test "should transition to working state when received a proper message", %{state: state} do
+    test "should transition to working state after receiving a proper message", %{state: state} do
       config = %{256 => {:output, 1}}
 
       assert {{:ok, actions}, result_state} =
