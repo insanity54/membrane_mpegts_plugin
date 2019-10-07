@@ -86,8 +86,10 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     all_pads_present? =
       configuration
       |> Map.values()
-      |> Enum.map(fn {:output, pad_number} -> {:dynamic, :output, pad_number} end)
-      |> Enum.all?(fn pad -> pad in pad_names end)
+      |> Enum.all?(fn
+        {pad_name, pad_number} -> {:dynamic, pad_name, pad_number} in pad_names
+        _ -> false
+      end)
 
     if all_pads_present? do
       state = %State{state | configuration: configuration, work_state: :working}
@@ -119,7 +121,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     {:ok, state}
   end
 
-  def handle_process(:input, buffer, _ctx, %State{work_state: :working} = state) do
+  def handle_process(:input, buffer, ctx, %State{work_state: :working} = state) do
     {payloads, queue, parser} = Parser.parse_packets(state.queue <> buffer.payload, state.parser)
 
     buffer_actions =
@@ -134,7 +136,8 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
         {:buffer, {{:dynamic, pad_name, dynamic_id}, buffers}}
       end)
 
-    actions = buffer_actions ++ [redemand: {:dynamic, :output, 0}]
+    out_pads = ctx.pads |> Map.keys() |> Enum.filter(&match?({:dynamic, :output, _}, &1))
+    actions = buffer_actions ++ [redemand: out_pads]
     state = %State{state | queue: queue, parser: parser}
     {{:ok, actions}, state}
   end

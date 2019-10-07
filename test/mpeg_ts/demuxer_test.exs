@@ -182,6 +182,8 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
         |> Enum.map(fn num -> {{:dynamic, :output, num}, :pad_data} end)
         |> Enum.into(%{})
 
+      expected_redemand = dynamic_pads |> Map.keys()
+
       ctx = %{
         pads:
           %{
@@ -202,7 +204,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
 
         assert [
                  buffer: {{:dynamic, ^pad, ^number}, buffers},
-                 redemand: {:dynamic, :output, 0}
+                 redemand: ^expected_redemand
                ] = actions
 
         assert [%Membrane.Buffer{metadata: %{}, payload: received_payload}] = buffers
