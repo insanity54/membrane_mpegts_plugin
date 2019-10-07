@@ -19,12 +19,9 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
           }
   end
 
-  @doc """
-  Parses a single packet.
-
-  Packet should be at least 188 bytes long, otherwise parsing will result in error.
-  Unparsed data will be returned as part of the result.
-  """
+  # Parses a single packet.
+  # Packet should be at least 188 bytes long, otherwise parsing will result in error.
+  # Unparsed data will be returned as part of the result.
   @spec parse_single_packet(binary(), State.t()) ::
           {{:ok, {mpegts_pid, data :: binary}}, {rest :: binary, State.t()}}
           | {{:error, reason :: atom()}, {rest :: binary, State.t()}}
@@ -40,11 +37,8 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
 
   def parse_single_packet(rest, state), do: {{:error, :not_enough_data}, {rest, state}}
 
-  @doc """
-  Parses a binary that contains sequence of packets.
-
-  Each packet that fails parsing shall be ignored.
-  """
+  # Parses a binary that contains sequence of packets.
+  # Each packet that fails parsing shall be ignored.
   @spec parse_packets(binary, State.t()) ::
           {results :: %{mpegts_pid => [binary]}, rest :: binary, State.t()}
   def parse_packets(packets, state), do: do_parse_packets(packets, state, [])

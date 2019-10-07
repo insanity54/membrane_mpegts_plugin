@@ -1,7 +1,5 @@
 defmodule Membrane.Element.MPEG.TS.ProgramMapTable do
-  @moduledoc """
-  This module is responsible for parsing Program Map Table.
-  """
+  @moduledoc false
   defstruct [:pcr_pid, program_info: [], streams: %{}]
 
   @type t :: %__MODULE__{
@@ -22,9 +20,6 @@ defmodule Membrane.Element.MPEG.TS.ProgramMapTable do
           required(stream_id_t) => stream
         }
 
-  @doc """
-  Parses Program Map Table.
-  """
   @spec parse(binary()) :: {:ok, t()} | {:error, :malformed_entry}
   def parse(<<
         _reserved::3,
@@ -58,9 +53,8 @@ defmodule Membrane.Element.MPEG.TS.ProgramMapTable do
            _reserved::3,
            elementary_pid::13,
            _reserved1::4,
-           # TODO: Use this to parse program_info
            program_info_length::12,
-           _::binary-size(program_info_length),
+           _program_info::binary-size(program_info_length),
            rest::binary
          >>,
          acc

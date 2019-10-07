@@ -1,7 +1,6 @@
 defmodule Membrane.Element.MPEG.TS.Table do
-  @moduledoc """
-  This module contains functions for parsing MPEG-TS tables.
-  """
+  @moduledoc false
+  # This module contains functions for parsing MPEG-TS tables.
 
   @enforce_keys [
     :table_id,
@@ -29,19 +28,16 @@ defmodule Membrane.Element.MPEG.TS.Table do
   @crc_length 4
   @remaining_header_length 5
 
-  @doc """
-  Parser an MPEG-TS table.
-
-  Attempts to parse it's contents according table id value. If table is not recognized
-  it's raw binary data is returned.
-  """
+  # Parses an MPEG-TS table.
+  # Attempts to parse its contents according to the table id value. If table is not recognized
+  # its raw binary data is returned.
   @spec parse(any) :: {:ok, {t(), binary | map, <<_::32>>}} | {:error, :malformed_packet}
   def parse(data) do
     with {:ok, {header, data}} <- parse_header(data) do
       content_length = header.section_length - @crc_length - @remaining_header_length
 
       case data do
-        <<raw_data::binary-size(content_length), crc::4-binary, _::binary>> ->
+        <<raw_data::binary-size(content_length), crc::@crc_length-binary, _::binary>> ->
           data =
             case parse_table_data(header.table_id, raw_data) do
               {:ok, data} ->
@@ -59,9 +55,7 @@ defmodule Membrane.Element.MPEG.TS.Table do
     end
   end
 
-  @doc """
-  Parses data that preceeds all the MPEG-TS tables.
-  """
+  # Parses data that preceeds all the MPEG-TS tables.
   @spec parse_header(any) :: {:ok, {t(), binary}} | {:error, :malformed_header}
   def parse_header(<<
         table_id::8,
