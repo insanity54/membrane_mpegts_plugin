@@ -30,12 +30,15 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   alias Membrane.Element.MPEG.TS.{ProgramAssociationTable, ProgramMapTable}
 
   @typedoc """
-  This types represents structure that is sent by this element to pipeline.
+  This types represents datae structure that is sent by this element to pipeline.
   """
   @type configuration :: %{
           ProgramAssociationTable.program_id_t() => ProgramMapTable.t()
         }
 
+  @typedoc """
+  Type representing data structure that should be sent by pipeline to the Demuxer.
+  """
   @type mapping :: %{
           ProgramMapTable.stream_id_t() => {Membrane.Element.Pad.name_t(), integer()}
         }
@@ -77,9 +80,21 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   end
 
   @impl true
-  def handle_other({:mpeg_ts_mapping, configuration}, _ctx, state) do
-    state = %State{state | configuration: configuration, work_state: :working}
-    {{:ok, demand: :input}, state}
+  def handle_other({:mpeg_ts_mapping, configuration}, ctx, state) do
+    pad_names = Map.keys(ctx.pads)
+
+    all_pads_present? =
+      configuration
+      |> Map.values()
+      |> Enum.map(fn {:output, pad_number} -> {:dynamic, :output, pad_number} end)
+      |> Enum.all?(fn pad -> pad in pad_names end)
+
+    if all_pads_present? do
+      state = %State{state | configuration: configuration, work_state: :working}
+      {{:ok, demand: :input}, state}
+    else
+      {{:error, :wrong_mapping}, state}
+    end
   end
 
   @impl true
@@ -107,12 +122,11 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   def handle_process(:input, buffer, _ctx, %State{work_state: :working} = state) do
     {payloads, queue, parser} = Parser.parse_packets(state.queue <> buffer.payload, state.parser)
 
-    payloads =
-      payloads
-      |> Enum.group_by(fn {pid, _payload} -> pid end, fn {_pid, payload} -> payload end)
-
     buffer_actions =
       payloads
+      |> Enum.group_by(fn {stream_pid, _payload} -> stream_pid end, fn {_stream_pid, payload} ->
+        payload
+      end)
       |> Enum.filter(fn {stream_pid, _} -> stream_pid in Map.keys(state.configuration) end)
       |> Enum.map(fn {stream_pid, payloads} ->
         buffers = Enum.map(payloads, fn payload -> %Buffer{payload: payload} end)

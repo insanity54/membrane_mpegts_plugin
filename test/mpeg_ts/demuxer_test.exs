@@ -8,6 +8,8 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
   alias Membrane.Element.MPEG.TS.Support.Fixtures
   alias Demuxer.State
 
+  @context_with_pads %{pads: %{{:dynamic, :output, 1} => %{}}}
+
   describe "When waiting for program association table demuxer" do
     setup _ do
       [state: %State{work_state: :waiting_pat}]
@@ -129,10 +131,10 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
     end
 
     test "should transition to working state when received a proper message", %{state: state} do
-      config = 1
+      config = %{256 => {:output, 1}}
 
       assert {{:ok, actions}, result_state} =
-               Demuxer.handle_other({:mpeg_ts_mapping, config}, nil, state)
+               Demuxer.handle_other({:mpeg_ts_mapping, config}, @context_with_pads, state)
 
       assert [demand: :input] == actions
 
@@ -140,6 +142,16 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
                configuration: config,
                work_state: :working
              } == result_state
+    end
+
+    test "should return an error if mapping is not valid", %{state: state} do
+      config = %{256 => {:output, 10}}
+
+      assert {{:error, :wrong_mapping},
+              %Membrane.Element.MPEG.TS.Demuxer.State{
+                configuration: %{},
+                work_state: :awaiting_mapping
+              }} = Demuxer.handle_other({:mpeg_ts_mapping, config}, @context_with_pads, state)
     end
   end
 
