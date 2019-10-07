@@ -15,7 +15,7 @@ defmodule Membrane.Element.MPEG.TS.IntegrationTest do
     options = %Pipeline.Options{
       module: Membrane.Element.MPEG.TS.Support.MockPipeline,
       custom_args: %{
-        inptu_path: @input_path,
+        input_path: @input_path,
         audio_out: @audio_out,
         video_out: @video_out
       }
