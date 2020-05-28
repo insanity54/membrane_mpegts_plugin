@@ -105,7 +105,7 @@ end
 
 defp first_matching_stream(streams, type) do
   streams
-  |> Enum.filter(fn {_, value} -> match?(%{stream_type: ^type}, value) end)
+  |> Enum.filter(fn {_, value} -> value.stream_type == type end)
   |> case do
     [{pid, _}] -> {:ok, pid}
     _ -> {:error, :no_stream}
