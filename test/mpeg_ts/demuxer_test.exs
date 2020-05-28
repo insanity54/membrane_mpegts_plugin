@@ -72,7 +72,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       buffer = %Membrane.Buffer{payload: packet}
       assert {{:ok, actions}, result_state} = Demuxer.handle_process(:input, buffer, nil, state)
       assert [demand: :input] == actions
-      assert result_state == %State{state | queue: tail}
+      assert result_state == %State{state | data_queue: tail}
     end
 
     test "should parse PMT and wait for subsequent PMTs if they are expected", %{state: state} do
@@ -120,18 +120,18 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
           state
         end)
 
-      assert final_state.queue == base
+      assert final_state.data_queue == base
     end
 
     test "should not process buffers", %{state: state} do
-      queue = "queue"
-      state = %State{state | queue: queue}
+      data_queue = "queue"
+      state = %State{state | data_queue: data_queue}
       appendix = "should_be_last"
 
       assert {:ok, result_state} =
                Demuxer.handle_process(:input, %Buffer{payload: appendix}, nil, state)
 
-      assert result_state == %State{state | queue: queue <> appendix}
+      assert result_state == %State{state | data_queue: data_queue <> appendix}
     end
 
     test "should transition to working state after receiving a proper message", %{state: state} do
@@ -242,7 +242,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
 
       assert actions == [demand: :input]
       assert state.work_state == :waiting_pmt
-      assert state.queue == ""
+      assert state.data_queue == ""
     end
 
     test "in case of an error next buffer is demanded if queue is empty" do
@@ -253,7 +253,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
 
       assert actions == [demand: :input]
       assert state.work_state == :waiting_pat
-      assert state.queue == ""
+      assert state.data_queue == ""
     end
   end
 

@@ -49,7 +49,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   defmodule State do
     @moduledoc false
-    defstruct queue: <<>>,
+    defstruct data_queue: <<>>,
               parser: %Parser.State{},
               demands: MapSet.new(),
               work_state: :waiting_pat,
@@ -104,7 +104,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   @impl true
   def handle_process(:input, buffer, _ctx, %State{work_state: work_state} = state)
       when work_state in [:waiting_pmt, :waiting_pat] do
-    %{state | queue: state.queue <> buffer.payload}
+    %{state | data_queue: state.data_queue <> buffer.payload}
     |> handle_startup()
   end
 
@@ -112,14 +112,15 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
         :input,
         buffer,
         _ctx,
-        %State{work_state: :awaiting_mapping, queue: q} = state
+        %State{work_state: :awaiting_mapping, data_queue: q} = state
       ) do
-    state = %State{state | queue: q <> buffer.payload}
+    state = %State{state | data_queue: q <> buffer.payload}
     {:ok, state}
   end
 
   def handle_process(:input, buffer, ctx, %State{work_state: :working} = state) do
-    {payloads, queue, parser} = Parser.parse_packets(state.queue <> buffer.payload, state.parser)
+    {payloads, data_queue, parser} =
+      Parser.parse_packets(state.data_queue <> buffer.payload, state.parser)
 
     buffer_actions =
       payloads
@@ -140,23 +141,24 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
       |> Enum.filter(&match?(Pad.ref(:output, _), &1))
 
     actions = buffer_actions ++ [redemand: out_pads]
-    state = %State{state | queue: queue, parser: parser}
+    state = %State{state | data_queue: data_queue, parser: parser}
     {{:ok, actions}, state}
   end
 
-  defp handle_startup(%State{queue: queue} = state) when byte_size(queue) < @ts_packet_size do
+  defp handle_startup(%State{data_queue: data_queue} = state)
+       when byte_size(data_queue) < @ts_packet_size do
     {{:ok, demand: :input}, state}
   end
 
   defp handle_startup(state) do
-    case Parser.parse_single_packet(state.queue, state.parser) do
+    case Parser.parse_single_packet(state.data_queue, state.parser) do
       {{:ok, {_pid, table_data}}, {rest, parser_state}} ->
-        %State{state | parser: parser_state, queue: rest}
+        %State{state | parser: parser_state, data_queue: rest}
         |> parse_table(table_data)
         |> handle_parse_result()
 
       {{:error, _reason}, {rest, parser_state}} ->
-        %State{state | parser: parser_state, queue: rest}
+        %State{state | parser: parser_state, data_queue: rest}
         |> handle_startup
     end
   end
@@ -198,10 +200,10 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     {{:error, :wrong_table}, state}
   end
 
-  # Demands another buffer if queue does not contain enough data
-  defp handle_parse_result({:ok, %State{work_state: ws, queue: queue} = state})
+  # Demands another buffer if data_queue does not contain enough data
+  defp handle_parse_result({:ok, %State{work_state: ws, data_queue: data_queue} = state})
        when ws in [:waiting_pat, :waiting_pmt] do
-    if queue |> byte_size() < @ts_packet_size do
+    if data_queue |> byte_size() < @ts_packet_size do
       {{:ok, demand: :input}, state}
     else
       handle_startup(state)
