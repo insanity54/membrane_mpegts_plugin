@@ -7,8 +7,10 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
   use Bunch
   use Membrane.Log
 
-  @default_stream_state %{started_pts_payload: nil}
   @type mpegts_pid :: non_neg_integer
+
+  @ts_packet_size 188
+  @default_stream_state %{started_pts_payload: nil}
 
   defmodule State do
     @moduledoc false
@@ -26,7 +28,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
   @spec parse_single_packet(binary(), State.t()) ::
           {{:ok, {mpegts_pid, data :: binary}}, {rest :: binary, State.t()}}
           | {{:error, reason :: atom()}, {rest :: binary, State.t()}}
-  def parse_single_packet(<<packet::188-binary, rest::binary>>, state) do
+  def parse_single_packet(<<packet::@ts_packet_size-binary, rest::binary>>, state) do
     case parse_packet(packet, state) do
       {{:ok, data}, state} ->
         {{:ok, data}, {rest, state}}
@@ -97,6 +99,9 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
             {:error, _} = error ->
               {error, put_stream(state, stream_pid)}
           end
+
+        stream_pid == 0x1FFF ->
+          {:null_packet, state}
 
         true ->
           {{:error, :unsuported_stream_pid}, state}

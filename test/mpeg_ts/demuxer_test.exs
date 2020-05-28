@@ -7,8 +7,10 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
   alias Membrane.Element.MPEG.TS.Demuxer
   alias Membrane.Element.MPEG.TS.Support.Fixtures
   alias Demuxer.State
+  alias Membrane.Pad
+  require Pad
 
-  @context_with_pads %{pads: %{{:dynamic, :output, 1} => %{}}}
+  @context_with_pads %{pads: %{Pad.ref(:output, 1) => %{}}}
 
   describe "When waiting for program association table demuxer" do
     setup _ do
@@ -35,7 +37,9 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       [state: %State{work_state: :waiting_pmt}]
     end
 
-    test "should parse PMT and transition to next state if that is the only program", %{state: state} do
+    test "should parse PMT and transition to next state if that is the only program", %{
+      state: state
+    } do
       expected_mapping = %{
         1 => %Membrane.Element.MPEG.TS.ProgramMapTable{
           pcr_pid: 256,
@@ -131,7 +135,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
     end
 
     test "should transition to working state after receiving a proper message", %{state: state} do
-      config = %{256 => {:output, 1}}
+      config = %{256 => Pad.ref(:output, 1)}
 
       assert {{:ok, actions}, result_state} =
                Demuxer.handle_other({:mpeg_ts_mapping, config}, @context_with_pads, state)
@@ -177,13 +181,13 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       example_configuration =
         0..pads_count
         |> Enum.map(fn num ->
-          {255 + num, {:output, num}}
+          {255 + num, Pad.ref(:output, num)}
         end)
         |> Enum.into(%{})
 
       dynamic_pads =
         0..pads_count
-        |> Enum.map(fn num -> {{:dynamic, :output, num}, :pad_data} end)
+        |> Enum.map(fn num -> {Pad.ref(:output, num), :pad_data} end)
         |> Enum.into(%{})
 
       expected_redemand = dynamic_pads |> Map.keys()
@@ -199,7 +203,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       state = %State{state | configuration: example_configuration}
 
       example_configuration
-      |> Enum.each(fn {pid, {pad, number}} ->
+      |> Enum.each(fn {pid, Pad.ref(pad, number)} ->
         payload = "#{pad}, #{number}"
         packet = Fixtures.data_packet(pid, payload)
         buffer = %Buffer{payload: packet}
@@ -207,7 +211,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
         assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, ctx, state)
 
         assert [
-                 buffer: {{:dynamic, ^pad, ^number}, buffers},
+                 buffer: {Pad.ref(^pad, ^number), buffers},
                  redemand: ^expected_redemand
                ] = actions
 

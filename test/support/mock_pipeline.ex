@@ -1,7 +1,6 @@
 defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
   @moduledoc false
   use Membrane.Pipeline
-  alias Membrane.Pipeline.Spec
 
   @impl true
   def handle_init(%{
@@ -16,13 +15,13 @@ defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
       video_out: %Membrane.Element.File.Sink{location: video_out}
     ]
 
-    links = %{
-      {:in, :output} => {:demuxer, :input},
-      {:demuxer, :output, 1} => {:video_out, :input},
-      {:demuxer, :output, 0} => {:audio_out, :input}
-    }
+    links = [
+      link(:in) |> to(:demuxer),
+      link(:demuxer) |> via_out(Pad.ref(:output, 1)) |> to(:video_out),
+      link(:demuxer) |> via_out(Pad.ref(:output, 0)) |> to(:audio_out)
+    ]
 
-    spec = %Spec{
+    spec = %ParentSpec{
       children: elements,
       links: links
     }
@@ -31,7 +30,7 @@ defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
   end
 
   def handle_notification({:mpeg_ts_mapping_req, _maping}, _from, state) do
-    mapping = %{256 => {:output, 1}, 257 => {:output, 0}}
+    mapping = %{256 => Pad.ref(:output, 1), 257 => Pad.ref(:output, 0)}
     message = {:mpeg_ts_mapping, mapping}
     {{:ok, forward: {:demuxer, message}}, state}
   end
