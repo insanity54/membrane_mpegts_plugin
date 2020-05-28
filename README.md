@@ -1,6 +1,6 @@
 # Membrane Multimedia Framework: MPEG-TS
 
-This package provides element that can be used for demuxing MPEG-TS.
+This package provides an element that can be used for demuxing MPEG-TS.
 
 It is part of [Membrane Multimedia Framework](https://membraneframework.org).
 
@@ -18,14 +18,14 @@ end
 
 The docs can be found at [HexDocs](https://hexdocs.pm/membrane_element_mpegts).
 
-## Abbrevations
+## Abbreviations
 
 PAT - Program Association Table
 PMT - Program Mapping Table
 
 ## Example Usage
 
-Demuxer is an elemant that has one `:input` and variable amount of outputs depending on the stream.
+Demuxer is an element that has one `:input` and variable amount of outputs depending on the stream.
 In this particular example we are demuxing a file that contains MPEG audio and H264 video.
 
 ```elixir
@@ -68,6 +68,7 @@ pipeline. When pipeline receives `{:mpeg_ts_mapping_req, prog_map_tables}` messa
 respond with mapping, that maps streams to pads.
 
 `prog_map_tables` that is received by pipeline has following format:
+
 ```
 %{
   program_id => %Membrane.Element.MPEG.TS.ProgramMapTable{
@@ -117,6 +118,7 @@ pipeline. When pipeline receives `{:mpeg_ts_mapping_req, prog_map_tables}` messa
 respond with the mapping, that maps streams to pads.
 
 `prog_map_tables` that is received by pipeline has the following format:
+
 ```
 %{
   program_id => %Membrane.Element.MPEG.TS.ProgramMapTable{
@@ -160,8 +162,6 @@ defp first_matching_stream(streams, type) do
   end
 end
 ```
-
-
 
 ## Copyright and License
 
