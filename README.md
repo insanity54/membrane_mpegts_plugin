@@ -34,7 +34,7 @@ def handle_init(path) do
   children = [
     file: %File.Source{location: path, chunk_size: 64000},
     demuxer: MPEG.TS.Demuxer,
-    parser: %H264.Parser{framerate: {24, 1}},
+    video_parser: %H264.Parser{framerate: {24, 1}},
     decoder: H264.Decoder,
     sdl: SDL.Player,
     mad: Mad.Decoder,
@@ -44,15 +44,15 @@ def handle_init(path) do
     portaudio: PortAudio.Sink
   ]
 
-  links = %{
-    {:file, :output} => {:demuxer, :input},
-    {:demuxer, :output, 1} => {:parser, :input},
-    {:demuxer, :output, 0} => {:mad, :input},
-    {:parser, :output} => {:decoder, :input},
-    {:decoder, :output} => {:sdl, :input},
-    {:mad, :output} => {:converter, :input},
-    {:converter, :output} => {:portaudio, :input}
-  }
+  links = [
+    link(:file) |> to(:demuxer),
+    link(:demuxer) |> via_out(Pad.ref(:output, 1)) |> to(:video_parser),
+    link(:demuxer) |> via_out(Pad.ref(:output, 0)) |> to(:mad),
+    link(:video_parser) |> to(:decoder),
+    link(:decoder) |> to(:sdl),
+    link(:mad) |> to(:converter),
+    link(:converter) |> to(:portaudio)
+  ]
 
   {{:ok,
     spec: %Spec{
