@@ -17,8 +17,8 @@ defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
 
     links = [
       link(:in) |> to(:demuxer),
-      link(:demuxer) |> via_out(Pad.ref(:output, 1)) |> to(:video_out),
-      link(:demuxer) |> via_out(Pad.ref(:output, 0)) |> to(:audio_out)
+      link(:demuxer) |> via_out(Pad.ref(:output, 256)) |> to(:video_out),
+      link(:demuxer) |> via_out(Pad.ref(:output, 257)) |> to(:audio_out)
     ]
 
     spec = %ParentSpec{
@@ -29,10 +29,8 @@ defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
     {{:ok, spec: spec}, %{}}
   end
 
-  def handle_notification({:mpeg_ts_mapping_req, _maping}, _from, state) do
-    mapping = %{256 => Pad.ref(:output, 1), 257 => Pad.ref(:output, 0)}
-    message = {:mpeg_ts_mapping, mapping}
-    {{:ok, forward: {:demuxer, message}}, state}
+  def handle_notification({:mpeg_ts_stream_info, _maping}, _from, state) do
+    {{:ok, forward: {:demuxer, :pads_ready}}, state}
   end
 
   def handle_notification(_notification, _from, state), do: {:ok, state}

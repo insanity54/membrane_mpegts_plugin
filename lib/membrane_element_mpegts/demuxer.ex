@@ -6,7 +6,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   [Program Association Table](https://en.wikipedia.org/wiki/MPEG_transport_stream#PAT) and
   [Program Mapping Table](https://en.wikipedia.org/wiki/MPEG_transport_stream#PMT).
   Upon succesfful parsing of those tables it will send a message to the pipeline in format
-  `{:mpeg_ts_mapping_req, configuration}`, where configuration contains data read from tables.
+  `{:mpeg_ts_stream_info, configuration}`, where configuration contains data read from tables.
 
   Configuration sent by element to pipeline should have following shape
   ```
@@ -36,13 +36,6 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
           ProgramAssociationTable.program_id_t() => ProgramMapTable.t()
         }
 
-  @typedoc """
-  Type representing data structure that should be sent by pipeline to the Demuxer.
-  """
-  @type mapping :: %{
-          ProgramMapTable.stream_id_t() => {Pad.ref_t(), integer()}
-        }
-
   @ts_packet_size 188
   @pat 0
   @pmt 2
@@ -55,7 +48,9 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
               work_state: :waiting_pat,
               configuration: %{}
 
-    @type work_state_t :: :waiting_pat | :waiting_pmt | :awaiting_mapping | :working
+    @type work_state_t :: :waiting_pat | :waiting_pmt | :awaiting_linking | :working
+
+    # TODO define type for this
   end
 
   def_output_pad :output,
@@ -66,7 +61,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   @impl true
   def handle_demand(_pad, _size, _unit, _ctx, %State{work_state: work_state} = state)
-      when work_state in [:waiting_pat, :waiting_pmt, :awaiting_mapping] do
+      when work_state in [:waiting_pat, :waiting_pmt, :awaiting_linking] do
     {:ok, state}
   end
 
@@ -80,20 +75,33 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   end
 
   @impl true
-  def handle_other({:mpeg_ts_mapping, configuration}, ctx, state) do
-    pad_names = Map.keys(ctx.pads)
+  def handle_other(:pads_ready, _ctx, %State{work_state: :working} = state),
+    do: {:ok, state}
 
-    all_pads_present? =
-      configuration
-      |> Map.values()
-      |> Enum.all?(&(&1 in pad_names))
-
-    if all_pads_present? do
-      state = %State{state | configuration: configuration, work_state: :working}
+  @impl true
+  def handle_other(:pads_ready, ctx, %State{work_state: :awaiting_linking} = state) do
+    if all_pads_added?(state.configuration, ctx) do
+      state = %State{state | work_state: :working}
       {{:ok, demand: :input}, state}
     else
-      {{:error, :wrong_mapping}, state}
+      {{:error, :invalid_output_pads}, state}
     end
+  end
+
+  defp all_pads_added?(configuration, ctx) do
+    pad_names =
+      ctx.pads
+      |> Map.keys()
+      |> Enum.filter(&match?(Pad.ref(:output, _), &1))
+
+    stream_ids =
+      configuration
+      |> Enum.flat_map(fn {_id, program_table} -> Map.keys(program_table.streams) end)
+
+    Enum.all?(
+      stream_ids,
+      &Enum.any?(pad_names, fn Pad.ref(:output, id) -> id == &1 end)
+    )
   end
 
   @impl true
@@ -112,7 +120,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
         :input,
         buffer,
         _ctx,
-        %State{work_state: :awaiting_mapping, data_queue: q} = state
+        %State{work_state: :awaiting_linking, data_queue: q} = state
       ) do
     state = %State{state | data_queue: q <> buffer.payload}
     {:ok, state}
@@ -124,14 +132,12 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
     buffer_actions =
       payloads
-      |> Enum.group_by(
-        fn {stream_pid, _payload} -> stream_pid end,
-        fn {_stream_pid, payload} -> payload end
-      )
-      |> Enum.filter(fn {stream_pid, _} -> stream_pid in Map.keys(state.configuration) end)
+      |> Enum.group_by(&Bunch.key/1, &Bunch.value/1)
+      # TODO What about ignoring streams
+      |> Enum.filter(fn {stream_pid, _} -> Pad.ref(:output, stream_pid) in Map.keys(ctx.pads) end)
       |> Enum.map(fn {stream_pid, payloads} ->
         buffers = Enum.map(payloads, fn payload -> %Buffer{payload: payload} end)
-        destination_pad = state.configuration[stream_pid]
+        destination_pad = Pad.ref(:output, stream_pid)
         {:buffer, {destination_pad, buffers}}
       end)
 
@@ -173,6 +179,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     end
   end
 
+  # Received PAT
   defp handle_table(%Table{table_id: @pat}, data, %State{work_state: :waiting_pat} = state) do
     parser = %{state.parser | known_tables: Map.values(data)}
     state = %State{state | work_state: :waiting_pmt, parser: parser}
@@ -180,6 +187,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     {:ok, state}
   end
 
+  # Received one of the PMTs
   defp handle_table(
          %Table{table_id: @pmt} = table,
          data,
@@ -189,8 +197,8 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     state = %State{state | configuration: configuration}
 
     if state.parser.known_tables == [] do
-      state = %State{state | work_state: :awaiting_mapping}
-      {{:ok, notify: {:mpeg_ts_mapping_req, configuration}}, state}
+      state = %State{state | work_state: :awaiting_linking, configuration: configuration}
+      {{:ok, notify: {:mpeg_ts_stream_info, configuration}}, state}
     else
       {:ok, state}
     end
@@ -212,4 +220,25 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   defp handle_parse_result({{:error, _reason}, state}), do: handle_startup(state)
   defp handle_parse_result({{:ok, _actions}, _state} = result), do: result
+
+  # Pad added after receving tables
+  @impl true
+  def handle_pad_added(Pad.ref(:output, _id), ctx, %State{work_state: :working} = state) do
+    if all_pads_added?(state.configuration, ctx) do
+      state = %State{state | work_state: :working}
+
+      if ctx.playback_state == :playing do
+        {{:ok, demand: :input}, state}
+      else
+        {:ok, state}
+      end
+    else
+      {:ok, state}
+    end
+  end
+
+  # Pad added during linking
+  @impl true
+  def handle_pad_added(_pad, _ctx, state),
+    do: {:ok, state}
 end
