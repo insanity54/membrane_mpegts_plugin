@@ -11,9 +11,17 @@ defmodule Membrane.Element.MPEG.TS.IntegrationTest do
   @audio_out "/tmp/audio"
   @video_out "/tmp/video"
 
-  test "Demuxer splits incoming stream into elementary streams" do
+  test "Demuxer works in a Pipeline that defines links statically in its init" do
+    perform_integration_test(Membrane.Element.MPEG.TS.Support.MockStaticPipeline)
+  end
+
+  test "Demuxer works in a Pipeline that links elements when it receives pmt" do
+    perform_integration_test(Membrane.Element.MPEG.TS.Support.MockDynamicPipeline)
+  end
+
+  defp perform_integration_test(pipeline) do
     options = %Pipeline.Options{
-      module: Membrane.Element.MPEG.TS.Support.MockPipeline,
+      module: pipeline,
       custom_args: %{
         input_path: @input_path,
         audio_out: @audio_out,

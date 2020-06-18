@@ -223,15 +223,10 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   # Pad added after receving tables
   @impl true
-  def handle_pad_added(Pad.ref(:output, _id), ctx, %State{work_state: :working} = state) do
+  def handle_pad_added(Pad.ref(:output, _id), ctx, %State{work_state: :awaiting_linking} = state) do
     if all_pads_added?(state.configuration, ctx) do
       state = %State{state | work_state: :working}
-
-      if ctx.playback_state == :playing do
-        {{:ok, demand: :input}, state}
-      else
-        {:ok, state}
-      end
+      {{:ok, demand: :input}, state}
     else
       {:ok, state}
     end
@@ -239,6 +234,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   # Pad added during linking
   @impl true
-  def handle_pad_added(_pad, _ctx, state),
-    do: {:ok, state}
+  def handle_pad_added(_pad, _ctx, state) do
+    {:ok, state}
+  end
 end

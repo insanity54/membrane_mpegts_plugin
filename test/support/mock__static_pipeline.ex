@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS.Support.MockPipeline do
+defmodule Membrane.Element.MPEG.TS.Support.MockStaticPipeline do
   @moduledoc false
   use Membrane.Pipeline
 
