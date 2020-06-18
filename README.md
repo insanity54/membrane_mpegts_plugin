@@ -23,7 +23,7 @@ The docs can be found at [HexDocs](https://hexdocs.pm/membrane_element_mpegts).
 PAT - Program Association Table
 PMT - Program Mapping Table
 
-## Example Usage
+## Usage
 
 Demuxer is an element that has one `:input` and variable amount of outputs depending on the stream.
 In this particular example we are demuxing a file that contains MPEG audio and H264 video.
@@ -54,18 +54,20 @@ def handle_init(path) do
     link(:converter) |> to(:portaudio)
   ]
 
-  {{:ok,
-    spec: %Spec{
-      children: children,
-      links: links,
-      stream_sync: :sinks
-    }}, %{}}
+  spec = %Spec{
+    children: children,
+    links: links,
+    stream_sync: :sinks
+  }
+
+  {{:ok, spec: spec}, %{}}
 end
 ```
 
 Upon successful parsing of MPEG Transport stream specific information, demuxer will notify
-pipeline. When pipeline receives `{:mpeg_ts_mapping_req, prog_map_tables}` message it will need to
-respond with mapping, that maps streams to pads.
+pipeline. When pipeline receives `{:mpeg_ts_stream_info, prog_map_tables}` message it will need to
+link demuxer outputs. Demuxer will continue its work when either every stream will have its
+corresponding pad linked or pipeline sends `:pads_ready` to the dumexer.
 
 `prog_map_tables` that is received by pipeline has following format:
 
@@ -87,61 +89,25 @@ we would do it like this:
 
 ```elixir
 @impl true
-def handle_notification({:mpeg_ts_mapping_req, prog_map_tables}, from, state) do
-  {video_pid, audio_pid} = parse_maping(prog_map_tables)
-  mapping = %{{:output, 1} => video_pid, {:output, 0} => audio_pid}
-  message = {:config_demuxer, mapping}
-  {{:ok, forward: {:demuxer, message}}, state}
-end
+def handle_notification({:mpeg_ts_stream_info, pmt}, _from, state) do
+  {audio_pid, video_pid} = parse_mapping(pmt)
 
-defp parse_mapping(mapping) do
-  mapping = mapping[1]
+  children = [
+    audio: An.Audio.Element,
+    video: A.Video.Element
+  ]
 
-  with {:ok, audio_pid} <- first_matching_stream(mapping.streams, :mpeg_audio),
-      {:ok, video_pid} <- first_matching_stream(mapping.streams, :h264) do
-    {audio_pid, video_pid}
-  end
-end
+  links = [
+    link(:demuxer) |> via_out(Pad.ref(:output, audio_pid)) |> to(:audio),
+    link(:demuxer) |> via_out(Pad.ref(:output, video_pid)) |> to(:video)
+  ]
 
-defp first_matching_stream(streams, type) do
-  streams
-  |> Enum.filter(fn {_, value} -> value.stream_type == type end)
-  |> case do
-    [{pid, _}] -> {:ok, pid}
-    _ -> {:error, :no_stream}
-  end
-end
-```
-
-Upon successful parsing of MPEG Transport stream specific information, demuxer will notify
-pipeline. When pipeline receives `{:mpeg_ts_mapping_req, prog_map_tables}` message it will need to
-respond with the mapping, that maps streams to pads.
-
-`prog_map_tables` that is received by pipeline has the following format:
-
-```
-%{
-  program_id => %Membrane.Element.MPEG.TS.ProgramMapTable{
-    streams: %{
-      stream_pid => %{
-        stream_type: atom,
-        stream_type_id: 0..255
-      }
-    }
+  spec = %Spec{
+    children: children,
+    links: links,
   }
-}
-```
 
-So, for example, if we wanted to have as simple behavior as using the first stream with a matching
-type we would do it like this:
-
-```elixir
-@impl true
-def handle_notification({:mpeg_ts_mapping_req, prog_map_tables}, from, state) do
-  {video_pid, audio_pid} = parse_maping(prog_map_tables)
-  mapping = %{{:output, 1} => video_pid, {:output, 0} => audio_pid}
-  message = {:config_demuxer, mapping}
-  {{:ok, forward: {:demuxer, message}}, state}
+  {{:ok, spec: spec}, state}
 end
 
 defp parse_mapping(mapping) do
