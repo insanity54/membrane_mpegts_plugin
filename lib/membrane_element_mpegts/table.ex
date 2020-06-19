@@ -38,15 +38,7 @@ defmodule Membrane.Element.MPEG.TS.Table do
 
       case data do
         <<raw_data::binary-size(content_length), crc::@crc_length-binary, _::binary>> ->
-          data =
-            case parse_table_data(header.table_id, raw_data) do
-              {:ok, data} ->
-                data
-
-              {:error, :unsuported_table_type} ->
-                raw_data
-            end
-
+          data = parse_table_content(header, raw_data)
           {:ok, {header, data, crc}}
 
         _ ->
@@ -97,4 +89,14 @@ defmodule Membrane.Element.MPEG.TS.Table do
 
   defp parse_table_data(_, _),
     do: {:error, :unsuported_table_type}
+
+  defp parse_table_content(header, raw_data) do
+    case parse_table_data(header.table_id, raw_data) do
+      {:ok, data} ->
+        data
+
+      {:error, :unsuported_table_type} ->
+        raw_data
+    end
+  end
 end

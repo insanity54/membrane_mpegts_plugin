@@ -15,10 +15,10 @@ defmodule Membrane.Element.MPEG.TS.ProgramAssociationTable do
   @spec parse(binary) :: {:ok, map()} | {:error, :malformed_data}
   def parse(data) when rem(byte_size(data), @entry_length) == 0 do
     programs =
-      for <<program_number::16, _reserved::3, pid::13 <- data>> do
+      for <<program_number::16, _reserved::3, pid::13 <- data>>,
+        into: %{} do
         {program_number, pid}
       end
-      |> Enum.into(%{})
 
     {:ok, programs}
   end
