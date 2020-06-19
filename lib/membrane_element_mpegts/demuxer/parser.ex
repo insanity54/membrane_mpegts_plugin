@@ -69,50 +69,31 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
     ~> {&1, rest, state}
   end
 
-  defp parse_packet(<<packet::188-binary>>, state) do
-    withl pts:
-            <<
-              0x47::8,
-              _transport_error_indicator::1,
-              payload_unit_start_indicator::1,
-              _transport_priority::1,
-              stream_pid::13,
-              _transport_scrambling_control::2,
-              adaptation_field_control::2,
-              _continuity_counter::4,
-              optional_fields::bitstring
-            >> <- packet,
-          do: {:ok, payload} <- parse_pts_optional(optional_fields, adaptation_field_control) do
-      cond do
-        stream_pid in 0x0000..0x0004 or stream_pid in state.known_tables ->
-          <<_pointer::8, payload::binary>> = payload
-          known_tables = state.known_tables |> List.delete(stream_pid)
-          {{:ok, {stream_pid, payload}}, %{state | known_tables: known_tables}}
+  defp parse_packet(
+         <<
+           0x47::8,
+           _transport_error_indicator::1,
+           payload_unit_start_indicator::1,
+           _transport_priority::1,
+           stream_pid::13,
+           _transport_scrambling_control::2,
+           adaptation_field_control::2,
+           _continuity_counter::4,
+           optional_fields::184-binary
+         >>,
+         state
+       ) do
+    case parse_pts_optional(optional_fields, adaptation_field_control) do
+      {:ok, payload} ->
+        handle_parsed_payload(stream_pid, payload, payload_unit_start_indicator, state)
 
-        stream_pid in 0x0020..0x1FFA or stream_pid in 0x1FFC..0x1FFE ->
-          stream_state = state.streams[stream_pid] || @default_stream_state
-
-          case parse_pts_payload(payload, payload_unit_start_indicator, stream_state) do
-            {:ok, {data, stream_state}} ->
-              {{:ok, {stream_pid, data}}, put_stream(state, stream_pid, stream_state)}
-
-            {:error, _} = error ->
-              {error, put_stream(state, stream_pid)}
-          end
-
-        stream_pid == 0x1FFF ->
-          {:null_packet, state}
-
-        true ->
-          {{:error, :unsuported_stream_pid}, state}
-      end
-    else
-      pts: _ ->
-        {{:error, {:invalid_packet, :pts}}, state}
-
-      do: error ->
+      error ->
         {error, put_stream(state, stream_pid)}
     end
+  end
+
+  defp parse_packet(_, state) do
+    {{:error, {:invalid_packet, :pts}}, state}
   end
 
   defp parse_pts_optional(payload, 0b01) do
@@ -141,6 +122,28 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
     {:error, {:invalid_packet, :adaptation_field_control}}
   end
 
+  defp handle_parsed_payload(stream_pid, payload, payload_unit_start_indicator, state) do
+    cond do
+      stream_pid in 0x0000..0x0004 or stream_pid in state.known_tables ->
+        <<_pointer::8, payload::binary>> = payload
+        known_tables = state.known_tables |> List.delete(stream_pid)
+        {{:ok, {stream_pid, payload}}, %{state | known_tables: known_tables}}
+
+      stream_pid in 0x0020..0x1FFA or stream_pid in 0x1FFC..0x1FFE ->
+        stream_state = state.streams[stream_pid] || @default_stream_state
+
+        payload
+        |> parse_pts_payload(payload_unit_start_indicator, stream_state)
+        |> handle_pts_payload(stream_pid, state)
+
+      stream_pid == 0x1FFF ->
+        {:null_packet, state}
+
+      true ->
+        {{:error, :unsuported_stream_pid}, state}
+    end
+  end
+
   defp parse_pts_payload(<<1::24, _::bitstring>> = payload, 0b1, stream_state) do
     with {:ok, payload} <- parse_pes_packet(payload) do
       {:ok, {payload, %{stream_state | started_pts_payload: :pes}}}
@@ -153,6 +156,14 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
 
   defp parse_pts_payload(_payload, _pusi, _stream_state) do
     {:error, {:unsupported_packet, :not_pes}}
+  end
+
+  defp handle_pts_payload({:ok, {data, stream_state}}, stream_pid, state) do
+    {{:ok, {stream_pid, data}}, put_stream(state, stream_pid, stream_state)}
+  end
+
+  defp handle_pts_payload({:error, _} = error, stream_pid, state) do
+    {error, put_stream(state, stream_pid)}
   end
 
   defp parse_pes_packet(<<
