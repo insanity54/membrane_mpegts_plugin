@@ -46,7 +46,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
           {results :: %{mpegts_pid => [binary]}, rest :: binary, State.t()}
   def parse_packets(packets, state), do: do_parse_packets(packets, state, [])
 
-  defp do_parse_packets(<<packet::188-binary, rest::binary>>, state, acc) do
+  defp do_parse_packets(<<packet::@ts_packet_size-binary, rest::binary>>, state, acc) do
     case parse_packet(packet, state) do
       {{:ok, data}, state} ->
         do_parse_packets(rest, state, [data | acc])
@@ -79,6 +79,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
            _transport_scrambling_control::2,
            adaptation_field_control::2,
            _continuity_counter::4,
+           # 184 = 188 - header length
            optional_fields::184-binary
          >>,
          state
