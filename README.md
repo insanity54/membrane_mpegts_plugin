@@ -75,9 +75,9 @@ corresponding pad linked or pipeline sends `:pads_ready` to the dumexer.
 %{
   program_id => %Membrane.Element.MPEG.TS.ProgramMapTable{
     streams: %{
-      stream_pid => %{
-        stream_type: atom,
-        stream_type_id: 0..255
+      packet_identifier => %{
+        type: atom,
+        type_id: 0..255
       }
     }
   }
