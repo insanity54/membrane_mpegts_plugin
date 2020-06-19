@@ -67,7 +67,8 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   def handle_demand(_pad, _size, unit, ctx, %State{work_state: :working} = state) do
     multiplier = if unit == :buffers, do: 1, else: 188
-    {{:ok, demand: {:input, &(&1 + ctx.incoming_demand * multiplier)}}, state}
+    standarized_new_demand = ctx.incoming_demand |> div(multiplier) |> ceil()
+    {{:ok, demand: {:input, &(&1 + standarized_new_demand)}}, state}
   end
 
   @impl true
