@@ -132,8 +132,57 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
              } == result_state
     end
 
-    test "should not change state unless all pads are linked"
-    test "should transition to working upon linking all pads"
+    test "should not change state unless all pads are linked" do
+      config = %{
+        1 => %{
+          streams: %{
+            2 => :stream_info,
+            3 => :stream_info
+          }
+        }
+      }
+
+      state = %State{
+        work_state: :awaiting_linking,
+        configuration: config
+      }
+
+      ctx = %{
+        pads: %{
+          Pad.ref(:output, 3) => :pad_data
+        }
+      }
+
+      assert {:ok, state} ==
+               Demuxer.handle_pad_added(Pad.ref(:output, 2), ctx, state)
+    end
+
+    test "should transition to working upon linking all pads" do
+      state = %State{
+        work_state: :awaiting_linking,
+        configuration: %{
+          1 => %{
+            streams: %{
+              2 => :stream_info,
+              3 => :stream_info
+            }
+          }
+        }
+      }
+
+      ctx = %{
+        pads: %{
+          Pad.ref(:output, 2) => :pad_data,
+          Pad.ref(:output, 3) => :pad_data
+        }
+      }
+
+      assert {{:ok, [demand: :input]}, %State{state | work_state: :working}} ==
+               Demuxer.handle_pad_added(Pad.ref(:output, 2), ctx, state)
+    end
+
+    # TODO finish this when core issue with handle_pad_added/3 has all pads in context is fixed
+    # test "adding pads in states `:waiting_pat` and `:waiting_pmt` should have no effect"
   end
 
   describe "When working demuxer" do

@@ -151,6 +151,31 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     {{:ok, actions}, state}
   end
 
+  # Pad added after receving tables
+  @impl true
+  def handle_pad_added(Pad.ref(:output, _id), ctx, %State{work_state: :awaiting_linking} = state) do
+    if all_pads_added?(state.configuration, ctx) do
+      state = %State{state | work_state: :working}
+      {{:ok, demand: :input}, state}
+    else
+      {:ok, state}
+    end
+  end
+
+  # Pad added during linking
+  @impl true
+  def handle_pad_added(_pad, _ctx, %State{work_state: work_state} = state)
+      when work_state in [:waiting_pat, :waiting_pmt] do
+    {:ok, state}
+  end
+
+  # TODO: remove when issue in core with handle pad added is resolved
+  # issue https://github.com/membraneframework/membrane-core/issues/258
+  @impl true
+  def handle_pad_added(_pad, _ctx, state) do
+    {:ok, state}
+  end
+
   defp handle_startup(%State{data_queue: data_queue} = state)
        when byte_size(data_queue) < @ts_packet_size do
     {{:ok, demand: :input}, state}
@@ -220,21 +245,4 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   defp handle_parse_result({{:error, _reason}, state}), do: handle_startup(state)
   defp handle_parse_result({{:ok, _actions}, _state} = result), do: result
-
-  # Pad added after receving tables
-  @impl true
-  def handle_pad_added(Pad.ref(:output, _id), ctx, %State{work_state: :awaiting_linking} = state) do
-    if all_pads_added?(state.configuration, ctx) do
-      state = %State{state | work_state: :working}
-      {{:ok, demand: :input}, state}
-    else
-      {:ok, state}
-    end
-  end
-
-  # Pad added during linking
-  @impl true
-  def handle_pad_added(_pad, _ctx, state) do
-    {:ok, state}
-  end
 end
