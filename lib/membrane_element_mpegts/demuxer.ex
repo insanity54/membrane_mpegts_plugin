@@ -42,6 +42,9 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   defmodule State do
     @moduledoc false
+
+    alias Membrane.Element.MPEG.TS.Demuxer
+
     defstruct data_queue: <<>>,
               parser: %Parser.State{},
               demands: MapSet.new(),
@@ -50,7 +53,13 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
     @type work_state_t :: :waiting_pat | :waiting_pmt | :awaiting_linking | :working
 
-    # TODO define type for this
+    @type t :: %__MODULE__{
+            data_queue: binary(),
+            parser: Parser.State.t(),
+            demands: MapSet.t(),
+            work_state: work_state_t(),
+            configuration: Demuxer.configuration()
+          }
   end
 
   def_output_pad :output,
