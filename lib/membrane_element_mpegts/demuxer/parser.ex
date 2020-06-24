@@ -171,16 +171,23 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
 
   defp parse_pes_packet(<<
          1::24,
-         _stream_id::8,
+         stream_id::8,
          _packet_length::16,
          optional_fields::bitstring
        >>) do
-    parse_pes_optional(optional_fields)
+    parse_pes_optional(optional_fields, stream_id)
   end
 
   defp parse_pes_packet(_), do: {:error, {:invalid_packet, :pes}}
 
-  defp parse_pes_optional(<<0b10::2, optional::bitstring>>) do
+  defp parse_pes_optional(<<0b10::2, optional::bitstring>>, stream_id) do
+    stream_ids_with_no_optional_fields = [
+      # padding_stream
+      0b10111110,
+      # private_stream_2
+      0b10111111
+    ]
+
     case optional do
       <<
         _scrambling_control::2,
@@ -196,17 +203,23 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
         _crc_flag::1,
         _extension_flag::1,
         pes_header_length::8,
-        _optional_fields::binary-size(pes_header_length),
-        data::binary
+        rest::binary
       >> ->
-        {:ok, data}
+        if stream_id in stream_ids_with_no_optional_fields do
+          {:ok, rest}
+        else
+          case rest do
+            <<_optional_fields::binary-size(pes_header_length), data::binary>> -> {:ok, data}
+            _ -> {:error, {:invalid_packet, :pes_optional}}
+          end
+        end
 
       _ ->
         {:error, {:invalid_packet, :pes_optional}}
     end
   end
 
-  defp parse_pes_optional(optional) do
+  defp parse_pes_optional(optional, _stream_id) do
     {:ok, optional}
   end
 
