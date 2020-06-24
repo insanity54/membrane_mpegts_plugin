@@ -125,57 +125,6 @@ defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
     {:error, {:invalid_packet, :adaptation_field_control}}
   end
 
-  defp parse_adaptation_field(<<
-         discontinuity_indicator::1,
-         random_acces_indicator::1,
-         priority_indicator::1,
-         pcr_flag::1,
-         opcr_flag::1,
-         splicing_point::1,
-         transport_private::1,
-         # TODO: Handle adaptation field extension
-         _adaptation_field_extension::1,
-         rest::binary
-       >>) do
-    with {:ok, {pcr, rest}} <-
-           take_bites_if_flag(rest, pcr_flag == 1, 6),
-         {:ok, {opcr, rest}} <-
-           take_bites_if_flag(rest, opcr_flag == 1, 6),
-         {:ok, {splice_countdown, rest}} <-
-           take_bites_if_flag(rest, splicing_point == 1, 1),
-         {:ok, {private_data_length, rest}} <-
-           take_bites_if_flag(rest, transport_private == 1, 1),
-         {:ok, {private_data, _rest}} <-
-           take_bites_if_flag(rest, private_data_length != nil, private_data_length) do
-      adaptation_fields = %{
-        discontinuity_indicator: discontinuity_indicator == 1,
-        random_acces_indicator: random_acces_indicator == 1,
-        priority_indicator: priority_indicator == 1,
-        pcr: pcr,
-        opcr: opcr,
-        splicing_point: splice_countdown,
-        private_data: private_data
-      }
-
-      {:ok, adaptation_fields}
-    else
-      _ ->
-        {:error, :invalid_adaptation_field}
-    end
-  end
-
-  defp take_bites_if_flag(data, true, number_of_bytes) do
-    case data do
-      <<data::binary-size(number_of_bytes), rest::binary>> ->
-        {:ok, {data, rest}}
-
-      _ ->
-        {:error, :invalid_packet}
-    end
-  end
-
-  defp take_bites_if_flag(data, false, _number_of_bytes), do: {:ok, {nil, data}}
-
   defp handle_parsed_payload(stream_pid, payload, payload_unit_start_indicator, state) do
     cond do
       stream_pid in 0x0000..0x0004 or stream_pid in state.known_tables ->
