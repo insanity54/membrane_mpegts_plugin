@@ -10,7 +10,10 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
   alias Membrane.Pad
   require Pad
 
-  @context_with_pads %{pads: %{Pad.ref(:output, 1) => %{}}}
+  @demand_in_buffers 10
+  @context_with_pads %{
+    pads: %{Pad.ref(:output, 1) => %{demand: @demand_in_buffers, other_demand_unit: :buffers}}
+  }
 
   describe "When waiting for program association table demuxer" do
     setup _ do
@@ -125,7 +128,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       assert {{:ok, actions}, result_state} =
                Demuxer.handle_other(:pads_ready, @context_with_pads, state)
 
-      assert [demand: :input] == actions
+      assert [demand: {:input, @demand_in_buffers}] == actions
 
       assert %Membrane.Element.MPEG.TS.Demuxer.State{
                work_state: :working
@@ -172,12 +175,13 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
 
       ctx = %{
         pads: %{
-          Pad.ref(:output, 2) => :pad_data,
-          Pad.ref(:output, 3) => :pad_data
+          Pad.ref(:output, 2) => %{demand: @demand_in_buffers, other_demand_unit: :buffers},
+          Pad.ref(:output, 3) => %{demand: 300, other_demand_unit: :bytes}
         }
       }
 
-      assert {{:ok, [demand: :input]}, %State{state | work_state: :working}} ==
+      assert {{:ok, [demand: {:input, @demand_in_buffers + 2}]},
+              %State{state | work_state: :working}} ==
                Demuxer.handle_pad_added(Pad.ref(:output, 2), ctx, state)
     end
 

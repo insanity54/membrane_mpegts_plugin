@@ -47,7 +47,6 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
     defstruct data_queue: <<>>,
               parser: %Parser.State{},
-              demands: MapSet.new(),
               work_state: :waiting_pat,
               configuration: %{}
 
@@ -56,7 +55,6 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     @type t :: %__MODULE__{
             data_queue: binary(),
             parser: Parser.State.t(),
-            demands: MapSet.t(),
             work_state: work_state_t(),
             configuration: Demuxer.configuration()
           }
@@ -75,8 +73,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   end
 
   def handle_demand(_pad, _size, unit, ctx, %State{work_state: :working} = state) do
-    multiplier = if unit == :buffers, do: 1, else: 188
-    standarized_new_demand = ctx.incoming_demand |> div(multiplier) |> ceil()
+    standarized_new_demand = standarize_demand(ctx.incoming_demand, unit)
     {{:ok, demand: {:input, &(&1 + standarized_new_demand)}}, state}
   end
 
@@ -93,7 +90,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   def handle_other(:pads_ready, ctx, %State{work_state: :awaiting_linking} = state) do
     if all_pads_added?(state.configuration, ctx) do
       state = %State{state | work_state: :working}
-      {{:ok, demand: :input}, state}
+      {{:ok, consolidate_demands(ctx)}, state}
     else
       {{:error, :invalid_output_pads}, state}
     end
@@ -152,14 +149,18 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
         {:buffer, {destination_pad, buffers}}
       end)
 
+    actions = buffer_actions ++ redemand_all_output_pads(ctx)
+    state = %State{state | data_queue: data_queue, parser: parser}
+    {{:ok, actions}, state}
+  end
+
+  defp redemand_all_output_pads(ctx) do
     out_pads =
       ctx.pads
       |> Map.keys()
       |> Enum.filter(&match?(Pad.ref(:output, _), &1))
 
-    actions = buffer_actions ++ [redemand: out_pads]
-    state = %State{state | data_queue: data_queue, parser: parser}
-    {{:ok, actions}, state}
+    [redemand: out_pads]
   end
 
   # Pad added after receving tables
@@ -167,7 +168,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   def handle_pad_added(Pad.ref(:output, _id), ctx, %State{work_state: :awaiting_linking} = state) do
     if all_pads_added?(state.configuration, ctx) do
       state = %State{state | work_state: :working}
-      {{:ok, demand: :input}, state}
+      {{:ok, consolidate_demands(ctx)}, state}
     else
       {:ok, state}
     end
@@ -256,4 +257,20 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   defp handle_parse_result({{:error, _reason}, state}), do: handle_startup(state)
   defp handle_parse_result({{:ok, _actions}, _state} = result), do: result
+
+  defp consolidate_demands(ctx) do
+    demand_size =
+      ctx.pads
+      |> Enum.filter(&match?({Pad.ref(:output, _), _pad}, &1))
+      |> Enum.reduce(0, fn {_pad_ref, elem}, acc ->
+        acc + standarize_demand(elem.demand, elem.other_demand_unit)
+      end)
+
+    [demand: {:input, demand_size}]
+  end
+
+  defp standarize_demand(size, unit) do
+    multiplier = if unit == :buffers, do: 1, else: 188
+    (size / multiplier) |> ceil()
+  end
 end
