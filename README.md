@@ -65,9 +65,9 @@ end
 ```
 
 Upon successful parsing of MPEG Transport stream specific information, demuxer will notify
-pipeline. When pipeline receives `{:mpeg_ts_stream_info, prog_map_tables}` message it will need to
-link demuxer outputs. Demuxer will continue its work when either every stream will have its
-corresponding pad linked or pipeline sends `:pads_ready` to the dumexer.
+its parent (usally a pipeline). When the parent receives `{:mpeg_ts_stream_info, prog_map_tables}` message it will need to
+link the demuxer outputs. The demuxer will continue its work when either every stream will have its
+corresponding pad linked or after receiving `:pads_ready` message.
 
 `prog_map_tables` that is received by pipeline has following format:
 
