@@ -32,26 +32,26 @@ In this particular example we are demuxing a file that contains MPEG audio and H
 @impl true
 def handle_init(path) do
   children = [
-    file: %File.Source{location: path, chunk_size: 64000},
+    source_file: %File.Source{location: path, chunk_size: 64000},
     demuxer: MPEG.TS.Demuxer,
     video_parser: %H264.Parser{framerate: {24, 1}},
-    decoder: H264.Decoder,
-    sdl: SDL.Player,
-    mad: Mad.Decoder,
-    converter: %SWResample.Converter{
+    video_decoder: H264.Decoder,
+    player: SDL.Player,
+    audio_decoder: Mad.Decoder,
+    audio_converter: %SWResample.Converter{
       output_caps: %Raw{channels: 2, format: :s16le, sample_rate: 48_000}
     },
     portaudio: PortAudio.Sink
   ]
 
   links = [
-    link(:file) |> to(:demuxer),
-    link(:demuxer) |> via_out(Pad.ref(:output, 1)) |> to(:video_parser),
-    link(:demuxer) |> via_out(Pad.ref(:output, 0)) |> to(:mad),
-    link(:video_parser) |> to(:decoder),
-    link(:decoder) |> to(:sdl),
-    link(:mad) |> to(:converter),
-    link(:converter) |> to(:portaudio)
+    link(:source_file) |> to(:demuxer),
+    link(:demuxer) |> via_out(Pad.ref(:output, 256)) |> to(:video_parser),
+    link(:demuxer) |> via_out(Pad.ref(:output, 257)) |> to(:audio_decoder),
+    link(:video_parser) |> to(:video_decoder),
+    link(:video_decoder) |> to(:player),
+    link(:audio_decoder) |> to(:audio_converter),
+    link(:audio_converter) |> to(:portaudio)
   ]
 
   spec = %Spec{
