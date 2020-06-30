@@ -88,12 +88,8 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   @impl true
   def handle_other(:pads_ready, ctx, %State{work_state: :awaiting_linking} = state) do
-    if all_pads_added?(state.configuration, ctx) do
-      state = %State{state | work_state: :working}
-      {{:ok, consolidate_demands(ctx)}, state}
-    else
-      {{:error, :invalid_output_pads}, state}
-    end
+    state = %State{state | work_state: :working}
+    {{:ok, consolidate_demands(ctx)}, state}
   end
 
   defp all_pads_added?(configuration, ctx) do
