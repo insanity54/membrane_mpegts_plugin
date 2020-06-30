@@ -120,12 +120,12 @@ defp parse_mapping(mapping) do
   end
 end
 
-defp first_matching_stream(streams, type) do
+def first_matching_stream(streams, type) do
   streams
-  |> Enum.filter(fn {_, value} -> value.stream_type == type end)
+  |> Enum.find(fn {_, value} -> value.type == type end)
   |> case do
-    [{pid, _}] -> {:ok, pid}
-    _ -> {:error, :no_stream}
+    nil -> {:error, :no_stream}
+    {pid, _stream_spec} -> {:ok, pid}
   end
 end
 ```
