@@ -96,7 +96,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     pad_names =
       ctx.pads
       |> Map.keys()
-      |> Enum.filter(&match?(Pad.ref(:output, _), &1))
+      |> Enum.filter(&(Pad.name_by_ref(&1) == :output))
 
     stream_ids =
       configuration
@@ -154,7 +154,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
     out_pads =
       ctx.pads
       |> Map.keys()
-      |> Enum.filter(&match?(Pad.ref(:output, _), &1))
+      |> Enum.filter(&(Pad.name_by_ref(&1) == :output))
 
     [redemand: out_pads]
   end
@@ -257,16 +257,17 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   defp consolidate_demands(ctx) do
     demand_size =
       ctx.pads
-      |> Enum.filter(&match?({Pad.ref(:output, _), _pad}, &1))
-      |> Enum.reduce(0, fn {_pad_ref, elem}, acc ->
-        acc + standarize_demand(elem.demand, elem.other_demand_unit)
+      |> Bunch.KVEnum.filter_by_keys(&(Pad.name_by_ref(&1) == :output))
+      |> Enum.reduce(0, fn {_pad_ref, pad_data}, acc ->
+        acc + standarize_demand(pad_data.demand, pad_data.other_demand_unit)
       end)
 
     [demand: {:input, demand_size}]
   end
 
-  defp standarize_demand(size, unit) do
-    multiplier = if unit == :buffers, do: 1, else: 188
-    (size / multiplier) |> ceil()
+  defp standarize_demand(size, :buffers), do: size
+
+  defp standarize_demand(size, :bytes) do
+    (size / 188) |> ceil()
   end
 end
