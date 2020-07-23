@@ -85,8 +85,8 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
                  pcr_pid: 256,
                  program_info: [],
                  streams: %{
-                   256 => %{stream_type: :h264, stream_type_id: 27},
-                   257 => %{stream_type: :mpeg_audio, stream_type_id: 3}
+                   256 => %{stream_type: :H264, stream_type_id: 27},
+                   257 => %{stream_type: :MPEG1_AUDIO, stream_type_id: 3}
                  }
                }
              } == accumulated_config
@@ -219,16 +219,16 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
           pcr_pid: 256,
           program_info: [],
           streams: %{
-            256 => %{stream_type: :h264, stream_type_id: 27},
-            257 => %{stream_type: :mpeg_audio, stream_type_id: 3}
+            256 => %{stream_type: :H264, stream_type_id: 27},
+            257 => %{stream_type: :MPEG1_AUDIO, stream_type_id: 3}
           }
         },
         1 => %Membrane.Element.MPEG.TS.ProgramMapTable{
           pcr_pid: 24,
           program_info: [],
           streams: %{
-            257 => %{stream_type: :h264, stream_type_id: 27},
-            258 => %{stream_type: :mpeg_audio, stream_type_id: 3}
+            257 => %{stream_type: :H264, stream_type_id: 27},
+            258 => %{stream_type: :MPEG1_AUDIO, stream_type_id: 3}
           }
         }
       }

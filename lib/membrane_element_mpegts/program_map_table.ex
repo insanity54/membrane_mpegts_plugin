@@ -72,6 +72,14 @@ defmodule Membrane.Element.MPEG.TS.ProgramMapTable do
     {:error, :malformed_entry}
   end
 
-  defp parse_stream_assigment(0x03), do: :mpeg_audio
-  defp parse_stream_assigment(0x1B), do: :h264
+  # Based on https://en.wikipedia.org/wiki/Program-specific_information#Elementary_stream_types
+  defp parse_stream_assigment(0x01), do: :MPEG1_VIDEO
+  defp parse_stream_assigment(0x02), do: :MPEG2_VIDEO
+  defp parse_stream_assigment(0x03), do: :MPEG1_AUDIO
+  defp parse_stream_assigment(0x04), do: :MPEG2_AUDIO
+  defp parse_stream_assigment(0x0F), do: :AAC
+  defp parse_stream_assigment(0x1B), do: :H264
+  defp parse_stream_assigment(0x1F), do: :MPEG4_SVC
+  defp parse_stream_assigment(0x20), do: :MPEG4_MVC
+  defp parse_stream_assigment(0x24), do: :H265
 end

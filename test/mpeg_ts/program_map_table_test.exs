@@ -13,8 +13,8 @@ defmodule Membrane.Element.MPEG.TS.ProgramMapTableTest do
                pcr_pid: 0x0100,
                program_info: [],
                streams: %{
-                 256 => %{stream_type: :h264, stream_type_id: 0x1B},
-                 257 => %{stream_type: :mpeg_audio, stream_type_id: 0x03}
+                 256 => %{stream_type: :H264, stream_type_id: 0x1B},
+                 257 => %{stream_type: :MPEG1_AUDIO, stream_type_id: 0x03}
                }
              } = table
     end

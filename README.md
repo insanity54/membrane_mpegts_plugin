@@ -114,8 +114,8 @@ end
 defp parse_mapping(mapping) do
   mapping = mapping[1]
 
-  with {:ok, audio_pid} <- first_matching_stream(mapping.streams, :mpeg_audio),
-      {:ok, video_pid} <- first_matching_stream(mapping.streams, :h264) do
+  with {:ok, audio_pid} <- first_matching_stream(mapping.streams, :MPEG1_AUDIO),
+      {:ok, video_pid} <- first_matching_stream(mapping.streams, :H264) do
     {audio_pid, video_pid}
   end
 end

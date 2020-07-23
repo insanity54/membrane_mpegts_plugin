@@ -15,8 +15,8 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
       pcr_pid: 256,
       program_info: [],
       streams: %{
-        256 => %{stream_type: :h264, stream_type_id: 27},
-        257 => %{stream_type: :mpeg_audio, stream_type_id: 3}
+        256 => %{stream_type: :H264, stream_type_id: 27},
+        257 => %{stream_type: :MPEG1_AUDIO, stream_type_id: 3}
       }
     }
   }
