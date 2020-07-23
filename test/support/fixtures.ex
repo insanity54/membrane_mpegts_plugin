@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS.Support.Fixtures do
+defmodule Membrane.MPEG.TS.Support.Fixtures do
   @moduledoc false
   # values in this module are in hex so they can be easily validated with attached test media
   def pat, do: <<0x00, 0x01, 0xF0, 0x00>>

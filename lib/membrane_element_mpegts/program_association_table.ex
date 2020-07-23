@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS.ProgramAssociationTable do
+defmodule Membrane.MPEG.TS.ProgramAssociationTable do
   @moduledoc false
 
   @type program_id_t :: 0..65_535

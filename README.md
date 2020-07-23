@@ -6,17 +6,17 @@ It is part of [Membrane Multimedia Framework](https://membraneframework.org).
 
 ## Installation
 
-The package can be installed by adding `membrane_element_mpegts` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `membrane_mpegts_plugin` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:membrane_element_mpegts, "~> 0.1.0"}
+    {:membrane_mpegts_plugin, "~> 0.1.0"}
   ]
 end
 ```
 
-The docs can be found at [HexDocs](https://hexdocs.pm/membrane_element_mpegts).
+The docs can be found at [HexDocs](https://hexdocs.pm/membrane_mpegts_plugin).
 
 ## Abbreviations
 
@@ -26,13 +26,13 @@ PMT - Program Mapping Table
 ## Usage
 
 Demuxer is an element that has one `:input` and variable amount of outputs depending on the stream.
-In this particular example we are demuxing a file that contains MPEG audio and H264 video.
+In this particular example we are demuxing a file that contains MPEG1 audio and H264 video.
 
 ```elixir
 @impl true
 def handle_init(path) do
   children = [
-    source_file: %File.Source{location: path, chunk_size: 64000},
+    source_file: %File.Source{location: path, chunk_size: 64_000},
     demuxer: MPEG.TS.Demuxer,
     video_parser: %H264.Parser{framerate: {24, 1}},
     video_decoder: H264.Decoder,
@@ -74,7 +74,7 @@ corresponding pad linked or after receiving `:pads_ready` message. If demuxer re
 
 ```
 %{
-  program_id => %Membrane.Element.MPEG.TS.ProgramMapTable{
+  program_id => %Membrane.MPEG.TS.ProgramMapTable{
     streams: %{
       packet_identifier => %{
         type: atom,
@@ -132,8 +132,8 @@ end
 
 ## Copyright and License
 
-Copyright 2019, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane-element-mpegts)
+Copyright 2019, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_mpegts_plugin)
 
-[![Software Mansion](https://membraneframework.github.io/static/logo/swm_logo_readme.png)](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane-element-mpegts)
+[![Software Mansion](https://logo.swmansion.com/logo?color=white&variant=desktop&width=200&tag=membrane-github)](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_mpegts_plugin)
 
 Licensed under the [Apache License, Version 2.0](LICENSE)

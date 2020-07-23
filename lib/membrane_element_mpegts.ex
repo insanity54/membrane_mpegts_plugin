@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS do
+defmodule Membrane.MPEG.TS do
   @moduledoc false
   use Application
 

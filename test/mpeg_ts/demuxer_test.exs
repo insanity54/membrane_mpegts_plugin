@@ -1,11 +1,11 @@
-defmodule Membrane.Element.MPEG.TS.DemuxerTest do
+defmodule Membrane.MPEG.TS.DemuxerTest do
   use ExUnit.Case
 
   # TODO: Marked for refactoring
 
   alias Membrane.Buffer
-  alias Membrane.Element.MPEG.TS.Demuxer
-  alias Membrane.Element.MPEG.TS.Support.Fixtures
+  alias Membrane.MPEG.TS.Demuxer
+  alias Membrane.MPEG.TS.Support.Fixtures
   alias Demuxer.State
   alias Membrane.Pad
   require Pad
@@ -50,7 +50,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, nil, state)
       assert [notify: {:mpeg_ts_stream_info, config}] = actions
 
-      assert state == %Membrane.Element.MPEG.TS.Demuxer.State{
+      assert state == %Membrane.MPEG.TS.Demuxer.State{
                configuration: config,
                work_state: :awaiting_linking
              }
@@ -81,7 +81,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
              } = state
 
       assert %{
-               1 => %Membrane.Element.MPEG.TS.ProgramMapTable{
+               1 => %Membrane.MPEG.TS.ProgramMapTable{
                  pcr_pid: 256,
                  program_info: [],
                  streams: %{
@@ -130,7 +130,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
 
       assert [demand: {:input, @demand_in_buffers}] == actions
 
-      assert %Membrane.Element.MPEG.TS.Demuxer.State{
+      assert %Membrane.MPEG.TS.Demuxer.State{
                work_state: :working
              } == result_state
     end
@@ -215,7 +215,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
       pads_count = 10
 
       configuration = %{
-        0 => %Membrane.Element.MPEG.TS.ProgramMapTable{
+        0 => %Membrane.MPEG.TS.ProgramMapTable{
           pcr_pid: 256,
           program_info: [],
           streams: %{
@@ -223,7 +223,7 @@ defmodule Membrane.Element.MPEG.TS.DemuxerTest do
             257 => %{stream_type: :MPEG1_AUDIO, stream_type_id: 3}
           }
         },
-        1 => %Membrane.Element.MPEG.TS.ProgramMapTable{
+        1 => %Membrane.MPEG.TS.ProgramMapTable{
           pcr_pid: 24,
           program_info: [],
           streams: %{

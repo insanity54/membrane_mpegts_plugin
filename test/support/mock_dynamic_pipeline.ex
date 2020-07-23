@@ -1,6 +1,8 @@
-defmodule Membrane.Element.MPEG.TS.Support.MockDynamicPipeline do
+defmodule Membrane.MPEG.TS.Support.MockDynamicPipeline do
   @moduledoc false
   use Membrane.Pipeline
+
+  alias Membrane.Element.File
 
   @impl true
   def handle_init(
@@ -9,8 +11,8 @@ defmodule Membrane.Element.MPEG.TS.Support.MockDynamicPipeline do
         } = options
       ) do
     elements = [
-      in: %Membrane.Element.File.Source{location: input_path},
-      demuxer: Membrane.Element.MPEG.TS.Demuxer
+      in: %File.Source{location: input_path},
+      demuxer: Membrane.MPEG.TS.Demuxer
     ]
 
     links = [
@@ -27,8 +29,8 @@ defmodule Membrane.Element.MPEG.TS.Support.MockDynamicPipeline do
 
   def handle_notification({:mpeg_ts_stream_info, _maping}, _from, state) do
     elements = [
-      audio_out: %Membrane.Element.File.Sink{location: state.audio_out},
-      video_out: %Membrane.Element.File.Sink{location: state.video_out}
+      audio_out: %File.Sink{location: state.audio_out},
+      video_out: %File.Sink{location: state.video_out}
     ]
 
     links = [

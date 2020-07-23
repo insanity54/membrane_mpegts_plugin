@@ -1,23 +1,27 @@
-defmodule Membrane.Element.MPEG.TS.MixProject do
+defmodule Membrane.MPEG.TS.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @github_url "https://github.com/membraneframework/membrane-element-membrane_element_mpegts"
+  @github_url "https://github.com/membraneframework/membrane_mpegts_plugin"
 
   def project do
     [
-      app: :membrane_element_mpegts,
+      app: :membrane_mpegts_plugin,
       version: @version,
       elixir: "~> 1.7",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      description: "Membrane Multimedia Framework (MPEG-TS Element)",
+      deps: deps(),
+
+      # Hex
+      description: "Membrane Multimedia Framework (MPEG-TS Plugin)",
       package: package(),
-      name: "Membrane Element: MPEG-TS",
+
+      # Docs
+      name: "Membrane MPEG-TS Plugin",
       source_url: @github_url,
       docs: docs(),
       homepage_url: "https://membraneframework.org",
-      deps: deps(),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         coveralls: :test,
@@ -37,11 +41,14 @@ defmodule Membrane.Element.MPEG.TS.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_env), do: ["lib"]
 
-  defp docs do
+  defp deps do
     [
-      main: "readme",
-      extras: ["README.md"],
-      source_ref: "v#{@version}"
+      {:membrane_core, "~> 0.5.2"},
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0.0", only: [:dev], runtime: false},
+      {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:membrane_element_file, "~> 0.3.0", only: :test},
+      {:excoveralls, "~> 0.10", only: :test}
     ]
   end
 
@@ -56,14 +63,12 @@ defmodule Membrane.Element.MPEG.TS.MixProject do
     ]
   end
 
-  defp deps do
+  defp docs do
     [
-      {:membrane_core, "~> 0.5.0"},
-      {:ex_doc, "~> 0.19", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.7", only: [:dev], runtime: false},
-      {:credo, "~> 1.1.0", only: [:dev, :test], runtime: false},
-      {:membrane_element_file, "~> 0.3.0", only: :test},
-      {:excoveralls, "~> 0.10", only: :test}
+      main: "readme",
+      extras: ["README.md"],
+      source_ref: "v#{@version}",
+      nest_modules_by_prefix: [Membrane.MPEG.TS]
     ]
   end
 end

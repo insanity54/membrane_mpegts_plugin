@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS.Demuxer do
+defmodule Membrane.MPEG.TS.Demuxer do
   @moduledoc """
   Demuxes MPEG TS stream.
 
@@ -11,7 +11,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   Configuration sent by element to pipeline should have following shape
   ```
   %{
-    program_id => %Membrane.Element.MPEG.TS.ProgramMapTable{
+    program_id => %Membrane.MPEG.TS.ProgramMapTable{
       pcr_pid: 256,
       program_info: [],
       streams: %{
@@ -26,8 +26,8 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
 
   alias __MODULE__.Parser
   alias Membrane.Buffer
-  alias Membrane.Element.MPEG.TS.Table
-  alias Membrane.Element.MPEG.TS.{ProgramAssociationTable, ProgramMapTable}
+  alias Membrane.MPEG.TS.Table
+  alias Membrane.MPEG.TS.{ProgramAssociationTable, ProgramMapTable}
 
   @typedoc """
   This types represents datae structure that is sent by this element to pipeline.
@@ -43,7 +43,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   defmodule State do
     @moduledoc false
 
-    alias Membrane.Element.MPEG.TS.Demuxer
+    alias Membrane.MPEG.TS.Demuxer
 
     defstruct data_queue: <<>>,
               parser: %Parser.State{},
@@ -203,7 +203,7 @@ defmodule Membrane.Element.MPEG.TS.Demuxer do
   end
 
   defp parse_table(state, table_data) do
-    case Membrane.Element.MPEG.TS.Table.parse(table_data) do
+    case Membrane.MPEG.TS.Table.parse(table_data) do
       {:ok, {header, data, _crc}} ->
         handle_table(header, data, state)
 

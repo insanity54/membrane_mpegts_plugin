@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS.ProgramMapTable do
+defmodule Membrane.MPEG.TS.ProgramMapTable do
   @moduledoc false
   defstruct [:pcr_pid, program_info: [], streams: %{}]
 

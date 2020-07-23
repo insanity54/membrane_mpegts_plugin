@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS.IntegrationTest do
+defmodule Membrane.MPEG.TS.IntegrationTest do
   use ExUnit.Case
 
   import Membrane.Testing.Assertions
@@ -12,11 +12,11 @@ defmodule Membrane.Element.MPEG.TS.IntegrationTest do
   @video_out "/tmp/video"
 
   test "Demuxer works in a Pipeline that defines links statically in its init" do
-    perform_integration_test(Membrane.Element.MPEG.TS.Support.MockStaticPipeline)
+    perform_integration_test(Membrane.MPEG.TS.Support.MockStaticPipeline)
   end
 
   test "Demuxer works in a Pipeline that links elements when it receives pmt" do
-    perform_integration_test(Membrane.Element.MPEG.TS.Support.MockDynamicPipeline)
+    perform_integration_test(Membrane.MPEG.TS.Support.MockDynamicPipeline)
   end
 
   defp perform_integration_test(pipeline) do

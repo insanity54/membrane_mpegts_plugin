@@ -1,10 +1,10 @@
-defmodule Membrane.Element.MPEG.TS.Demuxer.ParserTest do
+defmodule Membrane.MPEG.TS.Demuxer.ParserTest do
   use ExUnit.Case
   require Integer
 
-  alias Membrane.Element.MPEG.TS.Demuxer.Parser
+  alias Membrane.MPEG.TS.Demuxer.Parser
   alias Parser.State
-  alias Membrane.Element.MPEG.TS.Support.Fixtures
+  alias Membrane.MPEG.TS.Support.Fixtures
 
   setup do
     [state: %Parser.State{}]

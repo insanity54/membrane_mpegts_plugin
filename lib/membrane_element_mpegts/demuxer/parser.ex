@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS.Demuxer.Parser do
+defmodule Membrane.MPEG.TS.Demuxer.Parser do
   @moduledoc false
   # Based on:
   # * https://en.wikipedia.org/wiki/MPEG_transport_stream

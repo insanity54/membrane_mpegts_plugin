@@ -1,4 +1,4 @@
-defmodule Membrane.Element.MPEG.TS.Table do
+defmodule Membrane.MPEG.TS.Table do
   @moduledoc false
   # This module contains functions for parsing MPEG-TS tables.
 
@@ -82,10 +82,10 @@ defmodule Membrane.Element.MPEG.TS.Table do
   def parse_header(_), do: {:error, :malformed_header}
 
   defp parse_table_data(0x00, data),
-    do: Membrane.Element.MPEG.TS.ProgramAssociationTable.parse(data)
+    do: Membrane.MPEG.TS.ProgramAssociationTable.parse(data)
 
   defp parse_table_data(0x02, data),
-    do: Membrane.Element.MPEG.TS.ProgramMapTable.parse(data)
+    do: Membrane.MPEG.TS.ProgramMapTable.parse(data)
 
   defp parse_table_data(_, _),
     do: {:error, :unsuported_table_type}

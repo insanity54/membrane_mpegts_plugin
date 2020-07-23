@@ -1,6 +1,8 @@
-defmodule Membrane.Element.MPEG.TS.Support.MockStaticPipeline do
+defmodule Membrane.MPEG.TS.Support.MockStaticPipeline do
   @moduledoc false
   use Membrane.Pipeline
+
+  alias Membrane.Element.File
 
   @impl true
   def handle_init(%{
@@ -9,10 +11,10 @@ defmodule Membrane.Element.MPEG.TS.Support.MockStaticPipeline do
         video_out: video_out
       }) do
     elements = [
-      in: %Membrane.Element.File.Source{location: input_path},
-      demuxer: Membrane.Element.MPEG.TS.Demuxer,
-      audio_out: %Membrane.Element.File.Sink{location: audio_out},
-      video_out: %Membrane.Element.File.Sink{location: video_out}
+      in: %File.Source{location: input_path},
+      demuxer: Membrane.MPEG.TS.Demuxer,
+      audio_out: %File.Sink{location: audio_out},
+      video_out: %File.Sink{location: video_out}
     ]
 
     links = [

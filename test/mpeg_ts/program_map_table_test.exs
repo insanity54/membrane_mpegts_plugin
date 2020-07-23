@@ -1,8 +1,8 @@
-defmodule Membrane.Element.MPEG.TS.ProgramMapTableTest do
+defmodule Membrane.MPEG.TS.ProgramMapTableTest do
   use ExUnit.Case
 
-  alias Membrane.Element.MPEG.TS.ProgramMapTable
-  alias Membrane.Element.MPEG.TS.Support.Fixtures
+  alias Membrane.MPEG.TS.ProgramMapTable
+  alias Membrane.MPEG.TS.Support.Fixtures
 
   # TODO add more exhaustive tests
   describe "Program Map Table parser" do
