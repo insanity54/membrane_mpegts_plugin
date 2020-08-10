@@ -1,5 +1,8 @@
 # Membrane Multimedia Framework: MPEG-TS
 
+[![Hex.pm](https://img.shields.io/hexpm/v/membrane_mpegts_plugin.svg)](https://hex.pm/packages/membrane_mpegts_plugin)
+[![CircleCI](https://circleci.com/gh/membraneframework/membrane_mpegts_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_mpegts_plugin)
+
 This package provides an element that can be used for demuxing MPEG-TS.
 
 It is part of [Membrane Multimedia Framework](https://membraneframework.org).
