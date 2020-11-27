@@ -2,7 +2,7 @@ defmodule Membrane.MPEG.TS.Support.MockStaticPipeline do
   @moduledoc false
   use Membrane.Pipeline
 
-  alias Membrane.Element.File
+  alias Membrane.File
 
   @impl true
   def handle_init(%{
