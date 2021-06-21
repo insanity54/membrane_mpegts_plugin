@@ -47,7 +47,7 @@ defmodule Membrane.MPEG.TS.MixProject do
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0", only: [:dev], runtime: false},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:membrane_file_plugin, "~> 0.5.0", only: :test},
+      {:membrane_file_plugin, "~> 0.6.0", only: :test},
       {:excoveralls, "~> 0.13", only: :test}
     ]
   end
