@@ -14,7 +14,7 @@ The package can be installed by adding `membrane_mpegts_plugin` to your list of 
 ```elixir
 def deps do
   [
-    {:membrane_mpegts_plugin, "~> 0.1.0"}
+    {:membrane_mpegts_plugin, "~> 0.4.0"}
   ]
 end
 ```
