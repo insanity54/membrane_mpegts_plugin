@@ -23,7 +23,7 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
     test "should parse pat and transition to waiting for pmt state", %{state: state} do
       packet = Fixtures.pat_packet()
       buffer = %Membrane.Buffer{payload: packet}
-      assert {{:ok, actions}, result_state} = Demuxer.handle_process(:input, buffer, nil, state)
+      assert {{:ok, actions}, result_state} = Demuxer.handle_buffer(:input, buffer, nil, state)
       assert [demand: :input] == actions
       parser_state = %{state.parser | known_tables: [4096]}
 
@@ -47,7 +47,7 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
       buffer = %Membrane.Buffer{payload: packet}
       parser = %{state.parser | known_tables: [0x1000]}
       state = %State{state | parser: parser}
-      assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, nil, state)
+      assert {{:ok, actions}, state} = Demuxer.handle_buffer(:input, buffer, nil, state)
       assert [notify: {:mpeg_ts_stream_info, config}] = actions
 
       assert state == %Membrane.MPEG.TS.Demuxer.State{
@@ -60,7 +60,7 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
       tail = <<122, 123, 124, 125>>
       packet = Fixtures.pat_packet() <> tail
       buffer = %Membrane.Buffer{payload: packet}
-      assert {{:ok, actions}, result_state} = Demuxer.handle_process(:input, buffer, nil, state)
+      assert {{:ok, actions}, result_state} = Demuxer.handle_buffer(:input, buffer, nil, state)
       assert [demand: :input] == actions
       assert result_state == %State{state | data_queue: tail}
     end
@@ -71,7 +71,7 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
       parser = %{state.parser | known_tables: [0x1000, 0x1001]}
       state = %State{state | parser: parser}
 
-      assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, nil, state)
+      assert {{:ok, actions}, state} = Demuxer.handle_buffer(:input, buffer, nil, state)
       assert [demand: :input] = actions
 
       assert %State{
@@ -106,7 +106,7 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
         |> :binary.bin_to_list()
         |> Enum.reduce(state, fn elem, acc ->
           buffer = %Buffer{payload: <<elem>>}
-          assert {:ok, state} = Demuxer.handle_process(:input, buffer, nil, acc)
+          assert {:ok, state} = Demuxer.handle_buffer(:input, buffer, nil, acc)
           state
         end)
 
@@ -119,14 +119,14 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
       appendix = "should_be_last"
 
       assert {:ok, result_state} =
-               Demuxer.handle_process(:input, %Buffer{payload: appendix}, nil, state)
+               Demuxer.handle_buffer(:input, %Buffer{payload: appendix}, nil, state)
 
       assert result_state == %State{state | data_queue: data_queue <> appendix}
     end
 
     test "should transition to working state after receiving a proper message", %{state: state} do
       assert {{:ok, actions}, result_state} =
-               Demuxer.handle_other(:pads_ready, @context_with_pads, state)
+               Demuxer.handle_parent_notification(:pads_ready, @context_with_pads, state)
 
       assert [demand: {:input, @demand_in_buffers}] == actions
 
@@ -256,7 +256,7 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
         packet = Fixtures.data_packet(sid, payload)
         buffer = %Buffer{payload: packet}
 
-        assert {{:ok, actions}, state} = Demuxer.handle_process(:input, buffer, ctx, state)
+        assert {{:ok, actions}, state} = Demuxer.handle_buffer(:input, buffer, ctx, state)
 
         assert [
                  buffer: {Pad.ref(pad, number), buffers},
@@ -286,7 +286,7 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
       payload = garbage <> packet
 
       assert {{:ok, actions}, state} =
-               Demuxer.handle_process(:input, %Buffer{payload: payload}, nil, %State{})
+               Demuxer.handle_buffer(:input, %Buffer{payload: payload}, nil, %State{})
 
       assert actions == [demand: :input]
       assert state.work_state == :waiting_pmt
@@ -297,7 +297,7 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
       garbage = Fixtures.data_packet(5, "garbage")
 
       assert {{:ok, actions}, state} =
-               Demuxer.handle_process(:input, %Buffer{payload: garbage}, nil, %State{})
+               Demuxer.handle_buffer(:input, %Buffer{payload: garbage}, nil, %State{})
 
       assert actions == [demand: :input]
       assert state.work_state == :waiting_pat
@@ -306,6 +306,6 @@ defmodule Membrane.MPEG.TS.DemuxerTest do
   end
 
   test "When going from prepared to playing demands a buffer to kickstart configuration" do
-    assert {{:ok, demand: :input}, %State{}} = Demuxer.handle_prepared_to_playing(nil, %State{})
+    assert {[demand: :input], %State{}} = Demuxer.handle_playing(nil, %State{})
   end
 end

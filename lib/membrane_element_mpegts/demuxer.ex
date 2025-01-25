@@ -62,9 +62,10 @@ defmodule Membrane.MPEG.TS.Demuxer do
 
   def_output_pad :output,
     availability: :on_request,
-    caps: :any
+    accepted_format: _any
 
-  def_input_pad :input, caps: :any, demand_unit: :buffers
+  def_input_pad :input,
+    accepted_format: _any
 
   @impl true
   def handle_demand(_pad, _size, _unit, _ctx, %State{work_state: work_state} = state)
@@ -83,11 +84,11 @@ defmodule Membrane.MPEG.TS.Demuxer do
   end
 
   @impl true
-  def handle_other(:pads_ready, _ctx, %State{work_state: :working} = state),
-    do: {:ok, state}
+  def handle_parent_notification(:pads_ready, _context, %State{work_state: :working} = state),
+    do: {[], state}
 
   @impl true
-  def handle_other(:pads_ready, ctx, %State{work_state: :awaiting_linking} = state) do
+  def handle_parent_notification(:pads_ready, ctx, %State{work_state: :awaiting_linking} = state) do
     state = %State{state | work_state: :working}
     {{:ok, consolidate_demands(ctx)}, state}
   end
@@ -109,18 +110,18 @@ defmodule Membrane.MPEG.TS.Demuxer do
   end
 
   @impl true
-  def handle_prepared_to_playing(_ctx, state) do
-    {{:ok, demand: :input}, state}
+  def handle_playing(_ctx, state) do
+    {[demand: :input], state}
   end
 
   @impl true
-  def handle_process(:input, buffer, _ctx, %State{work_state: work_state} = state)
+  def handle_buffer(:input, buffer, _ctx, %State{work_state: work_state} = state)
       when work_state in [:waiting_pmt, :waiting_pat] do
     %{state | data_queue: state.data_queue <> buffer.payload}
     |> handle_startup()
   end
 
-  def handle_process(
+  def handle_buffer(
         :input,
         buffer,
         _ctx,
@@ -130,7 +131,7 @@ defmodule Membrane.MPEG.TS.Demuxer do
     {:ok, state}
   end
 
-  def handle_process(:input, buffer, ctx, %State{work_state: :working} = state) do
+  def handle_buffer(:input, buffer, ctx, %State{work_state: :working} = state) do
     {payloads, data_queue, parser} =
       Parser.parse_packets(state.data_queue <> buffer.payload, state.parser)
 

@@ -43,11 +43,11 @@ defmodule Membrane.MPEG.TS.MixProject do
 
   defp deps do
     [
-      {:membrane_core, "~> 0.8.0"},
+      {:membrane_core, "~> 1.1.2"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0", only: [:dev], runtime: false},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:membrane_file_plugin, "~> 0.7.0", only: :test},
+      {:membrane_file_plugin, "~> 0.17.2", only: :test},
       {:excoveralls, "~> 0.13", only: :test}
     ]
   end

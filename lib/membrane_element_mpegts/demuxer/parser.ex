@@ -5,7 +5,7 @@ defmodule Membrane.MPEG.TS.Demuxer.Parser do
   # * https://en.wikipedia.org/wiki/Packetized_elementary_stream
   # * https://en.wikipedia.org/wiki/Program-specific_information
   use Bunch
-  use Membrane.Log
+  require Membrane.Logger
 
   @type mpegts_pid :: non_neg_integer
 
@@ -55,7 +55,7 @@ defmodule Membrane.MPEG.TS.Demuxer.Parser do
         """
         MPEG-TS parser encountered an error: #{inspect(reason)}
         """
-        |> warn()
+        |> Membrane.Logger.warn()
 
         do_parse_packets(rest, state, acc)
     end
